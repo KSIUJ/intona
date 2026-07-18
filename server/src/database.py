@@ -1,4 +1,6 @@
 from typing import Annotated
+
+from fastapi import Depends
 from src.config import settings
 from sqlmodel import create_engine, Session
 
@@ -8,5 +10,5 @@ def get_db():
     with Session(engine) as session:
         yield session
 
-SessionDep = Annotated[Session, get_db()]
+SessionDep = Annotated[Session, Depends(get_db)]
 
