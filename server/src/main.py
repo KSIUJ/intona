@@ -1,0 +1,23 @@
+import select
+
+from src.models import User
+from src.database import SessionDep
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+#app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+@app.get("/user")
+async def user():
+    return {"message": "Hello World"}
+
+
+
