@@ -16,7 +16,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/user", response_model=list[Users])
+#testing endpoint
+@app.get("/users")
 def user(session: SessionDep) -> list[Users]:
     users = session.exec(select(Users)).all()
     for user in users:
