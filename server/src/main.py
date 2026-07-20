@@ -1,6 +1,7 @@
 import select
 
-from src.models import Users
+from src.auth.models import User, UserPublicWithType
+from src.models import ExerciseWithTeam, Exercise
 from src.database import SessionDep
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +9,7 @@ from sqlmodel import select
 
 app = FastAPI()
 
+#ToDo
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,12 +19,14 @@ app.add_middleware(
 )
 
 #testing endpoint
-@app.get("/users")
-def user(session: SessionDep) -> list[Users]:
-    users = session.exec(select(Users)).all()
-    for user in users:
-        print(user)
+@app.get("/users", response_model=list[UserPublicWithType])
+def user(session: SessionDep):
+    users = session.exec(select(User)).all()
     return users
 
+@app.get("/excersise", response_model=list[ExerciseWithTeam])
+def excersise(session: SessionDep):
+    exercises = session.exec(select(Exercise)).all()
+    return exercises
 
 
