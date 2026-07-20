@@ -72,9 +72,6 @@ async def get_all_users(db: Annotated[AsyncSession, Depends(get_db)]):
     result = await db.exec(select(User))
     users = result.all()
 
-    for user in users:
-        print(user)
-
     return users
 
 @router.get("/{user_id}", response_model=UserPublic)
