@@ -1,5 +1,3 @@
-import select
-
 from src.auth.models import User, UserPublicWithType
 from src.models import ExerciseWithTeam, Exercise
 from src.database import SessionDep
