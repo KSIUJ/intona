@@ -1,13 +1,24 @@
-from src.auth.models import User, UserPublicWithType
-from src.models import ExerciseWithTeam, Exercise
-from src.database import SessionDep
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, status, Request
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import select
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from sqlmodel import SQLModel, select
+import logging
 
-app = FastAPI()
+from src.database import engine
+from src.auth.router import router as auth_router
 
-#ToDo
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    yield
+    await engine.dispose()
+
+app = FastAPI(lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,15 +27,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#testing endpoint
-@app.get("/users", response_model=list[UserPublicWithType])
-def user(session: SessionDep):
-    users = session.exec(select(User)).all()
-    return users
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 
-@app.get("/excersise", response_model=list[ExerciseWithTeam])
-def excersise(session: SessionDep):
-    exercises = session.exec(select(Exercise)).all()
-    return exercises
+logger = logging.getLogger("uvicorn.error")
 
+@app.exception_handler(StarletteHTTPException)
+async def general_http_exception_handler(request: Request, exception: StarletteHTTPException):
+    if exception.status_code >= 500:
+        logger.error(f"Server error on {request.url.path}: {exception.detail}")
+    message = exception.detail if exception.detail else "An error occurred."
+    return JSONResponse(
+        status_code=exception.status_code,
+        content={"detail": message},
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exception: RequestValidationError):
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,  
+        content={"detail": exception.errors()},
+    )
 

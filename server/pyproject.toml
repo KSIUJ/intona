@@ -5,8 +5,11 @@ description = "Initial uv configuration"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "asyncpg>=0.31.0",
     "fastapi[standard]>=0.139.2",
+    "jwt>=1.4.0",
     "psycopg2>=2.9.12",
+    "pwdlib[argon2]>=0.3.0",
     "pydantic-settings>=2.14.2",
     "sqlmodel>=0.0.39",
 ]

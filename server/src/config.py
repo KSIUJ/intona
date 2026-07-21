@@ -1,7 +1,10 @@
-from pydantic import PostgresDsn
-from pydantic_settings import BaseSettings
+from pydantic import SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    postgres_url: PostgresDsn
+    secret_key: SecretStr
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+    database_url: str
 
-settings = Settings()  # type: ignore
+settings = Settings() # type: ignore  # Loaded from .env file
