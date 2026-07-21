@@ -8,7 +8,7 @@ class ExerciseType(ExerciseTypeBase, table=True):
     __tablename__ = "exercise_types"
     id: int | None = Field(default=None, primary_key=True)
 
-    exercises: list["Exercise"] = Relationship(back_populates="exercise_type")
+    exercises: list["Exercise"] = Relationship(back_populates="exercise_type", sa_relationship_kwargs={"lazy": "selectin"},)
 
 class ExerciseTypePublic(ExerciseTypeBase):
     id: int
@@ -22,7 +22,7 @@ class ExerciseBase(SQLModel):
 class Exercise(ExerciseBase, table=True):
     __tablename__ = "exercises"
     id: int | None = Field(default=None, primary_key=True)
-    exercise_type: ExerciseType = Relationship(back_populates="exercises")
+    exercise_type: ExerciseType = Relationship(back_populates="exercises", sa_relationship_kwargs={"lazy": "selectin"},)
 
 class ExercisePublic(ExerciseBase):
     id: int
