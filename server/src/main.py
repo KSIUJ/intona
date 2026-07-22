@@ -9,6 +9,7 @@ import logging
 
 from src.database import engine
 from src.auth.router import router as auth_router
+from src.exercises.router import router as exercise_router
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -19,6 +20,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,6 +30,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
+app.include_router(exercise_router, prefix="/api/exercises", tags=["exercises"])
 
 logger = logging.getLogger("uvicorn.error")
 

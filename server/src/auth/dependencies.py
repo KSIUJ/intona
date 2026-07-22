@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.database import get_db
+from src.database import SessionDep
 from src.auth.models import User
 from src.auth.utils import verify_access_token
 
@@ -12,7 +12,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/token")
 
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: SessionDep,
 ) -> User:
     user_id = verify_access_token(token)
     if user_id is None:
@@ -42,4 +42,16 @@ async def get_current_user(
         )
     return user
 
+
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+async def get_admin_user(user: CurrentUser) -> User:
+    if user.type.name != "Admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User doesn't have admin permission",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+AdminUser = Annotated[User, Depends(get_admin_user)]

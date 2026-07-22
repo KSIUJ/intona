@@ -9,6 +9,7 @@ class UserTypePrivate(BaseModel):
 class UserBase(BaseModel):
     username: str = Field(min_length=1, max_length=20)
     email: EmailStr = Field(max_length=100)
+    user_type_id: int = Field(default=2)
 
 class UserCreate(UserBase):
     password:str = Field(min_length=8, max_length=30)
