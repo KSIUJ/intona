@@ -11,12 +11,12 @@ from src.config import settings
 from src.auth.models import User
 from src.auth.schemas import UserCreate, UserPrivate, UserPublic, Token
 from src.auth.utils import hash_password, verify_password, create_access_token
-from src.auth.dependencies import CurrentUser
+from src.auth.dependencies import CurrentUser, SessionDep
 
 router = APIRouter()
 
 @router.post("/register", response_model=UserPrivate, status_code=status.HTTP_201_CREATED)
-async def create_user(user: UserCreate, db: Annotated[AsyncSession, Depends(get_db)]):
+async def create_user(user: UserCreate, db: SessionDep):
     result = await db.exec(
         select(User).where(func.lower(User.username) == user.username.lower())
     )
@@ -33,6 +33,7 @@ async def create_user(user: UserCreate, db: Annotated[AsyncSession, Depends(get_
         username=user.username,
         email=user.email.lower(),
         password_hash=hash_password(user.password),
+        user_type_id=user.user_type_id,
     )
     db.add(new_user)
     await db.commit()
@@ -42,7 +43,7 @@ async def create_user(user: UserCreate, db: Annotated[AsyncSession, Depends(get_
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: SessionDep,
 ):
     result = await db.exec(
         select(User).where(func.lower(User.email) == form_data.username.lower())
@@ -69,14 +70,14 @@ async def get_current_user(current_user: CurrentUser):
 
 # to change later back to response_model=list[UserPublic]
 @router.get("/users", response_model=list[UserPublic])
-async def get_all_users(db: Annotated[AsyncSession, Depends(get_db)]):
+async def get_all_users(db: SessionDep):
     result = await db.exec(select(User))
     users = result.all()
 
     return users
 
 @router.get("/{user_id}", response_model=UserPublic)
-async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+async def get_user(user_id: int, db: SessionDep):
     result = await db.exec(select(User).where(User.id == user_id))
     user = result.first()
 
