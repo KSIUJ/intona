@@ -1,5 +1,7 @@
 from sqlmodel import SQLModel, Field, Relationship
 
+from src.logs.models import ExerciseLogs
+
 class UserType(SQLModel, table=True):
     __tablename__ = "users_type"
     id: int | None = Field(default=None, primary_key=True)
@@ -16,4 +18,7 @@ class User(SQLModel, table=True):
     password_hash: str = Field(nullable=False)
 
     user_type_id: int = Field(nullable=False, foreign_key="users_type.id")
-    type: UserType = Relationship(back_populates="users", sa_relationship_kwargs={"lazy": "selectin"},)
+    # in the near future i will change this to lazy loading now it is eager loading
+    type: UserType = Relationship(back_populates="users", sa_relationship_kwargs={"lazy": "selectin"})
+    stats: "UserStats" = Relationship(back_populates="user",sa_relationship_kwargs={"lazy": "selectin", "uselist": False} )
+    logs: list[ExerciseLogs] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "raise"})

@@ -6,7 +6,6 @@ class ExerciseTypePublic(BaseModel):
     type: str
 
 class ExerciseBase(BaseModel):
-    id: int
     file_name: str
     path: str
 
@@ -14,5 +13,6 @@ class ExerciseCreate(ExerciseBase):
     type: int
 
 class ExercisePublic(ExerciseBase):
+    id: int
     exercise_type: ExerciseTypePublic
 
