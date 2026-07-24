@@ -1,17 +1,17 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import select, func
-from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.database import get_db
 from src.config import settings
 from src.auth.models import User
 from src.auth.schemas import UserCreate, UserPrivate, UserPublic, Token
 from src.auth.utils import hash_password, verify_password, create_access_token
 from src.auth.dependencies import CurrentUser, SessionDep
+from src.stats.models import UserStats
+from src.exercises.models import ExerciseType
 
 router = APIRouter()
 
@@ -35,9 +35,25 @@ async def create_user(user: UserCreate, db: SessionDep):
         password_hash=hash_password(user.password),
         user_type_id=user.user_type_id,
     )
+
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
+
+    exercise_types = await db.exec(select(ExerciseType))
+    exercise_types = exercise_types.all()
+
+    user_stats = UserStats(id=new_user.id,
+                           averageScore=0,
+                           averageScoreByCategory=[{"category": exercise.type, "score": 0} for exercise in exercise_types],
+                           currentStreak=0,
+                           longestStreak=0,
+                           masteredPercentage=0,
+                           exercisesCompleted=0,
+                           lastActivityDate=datetime.now())
+    db.add(user_stats)
+    await db.commit()
+
     return new_user
 
 @router.post("/token", response_model=Token)

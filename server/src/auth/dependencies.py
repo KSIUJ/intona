@@ -2,7 +2,6 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import select
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.database import SessionDep
 from src.auth.models import User
@@ -46,7 +45,7 @@ async def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 async def get_admin_user(user: CurrentUser) -> User:
-    if user.type.name != "Admin":
+    if user.type.name != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User doesn't have admin permission",
