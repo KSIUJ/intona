@@ -4,12 +4,13 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from sqlmodel import SQLModel, select
+from sqlmodel import SQLModel
 import logging
 
 from src.database import engine
 from src.auth.router import router as auth_router
 from src.exercises.router import router as exercise_router
+from src.stats.router import router as stats_router
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -31,6 +32,7 @@ app.add_middleware(
 
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(exercise_router, prefix="/api/exercises", tags=["exercises"])
+app.include_router(stats_router, prefix="/api/users", tags=["users"])
 
 logger = logging.getLogger("uvicorn.error")
 
