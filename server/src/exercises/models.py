@@ -1,5 +1,7 @@
 from sqlmodel import Field, Relationship, SQLModel
 
+from src.logs.models import ExerciseLogs
+
 class ExerciseType(SQLModel, table=True):
     __tablename__ = "exercise_types"
     id: int | None = Field(default=None, primary_key=True)
@@ -15,7 +17,8 @@ class Exercise(SQLModel, table=True):
     path: str = Field(nullable=False, unique=True)
 
     type: int = Field(nullable=False, foreign_key="exercise_types.id")
-    exercise_type: ExerciseType = Relationship(back_populates="exercises", sa_relationship_kwargs={"lazy": "selectin"},)
+    exercise_type: ExerciseType = Relationship(back_populates="exercises", sa_relationship_kwargs={"lazy": "selectin"})
+    exercise_logs: list[ExerciseLogs] = Relationship(back_populates="exercise", sa_relationship_kwargs={"lazy": "selectin"})
 
 
 

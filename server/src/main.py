@@ -11,6 +11,7 @@ from src.database import engine
 from src.auth.router import router as auth_router
 from src.exercises.router import router as exercise_router
 from src.stats.router import router as stats_router
+from src.vocal_analysis.router import router as vocal_analysis_router
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -33,6 +34,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(exercise_router, prefix="/api/exercises", tags=["exercises"])
 app.include_router(stats_router, prefix="/api/users", tags=["users"])
+app.include_router(vocal_analysis_router, prefix="/api/vocal_analysis", tags=["vocal_analysis"])
 
 logger = logging.getLogger("uvicorn.error")
 
