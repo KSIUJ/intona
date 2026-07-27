@@ -8,9 +8,11 @@ dependencies = [
     "asyncpg>=0.31.0",
     "fastapi[standard]>=0.139.2",
     "numpy>=2.5.1",
+    "onnxruntime>=1.28.0",
     "psycopg2>=2.9.12",
     "pwdlib[argon2]>=0.3.0",
     "pydantic-settings>=2.14.2",
     "pyjwt>=2.13.0",
+    "scipy>=1.18.0",
     "sqlmodel>=0.0.39",
 ]
