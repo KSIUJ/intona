@@ -1,3 +1,5 @@
+import onnxruntime
+
 from sqlmodel import select, func
 
 from src.exercises.models import Exercise
@@ -6,6 +8,7 @@ from src.stats.models import UserStats
 from src.stats.utils import actualize_user_streak
 from src.database import get_db
 
+crepe_model = onnxruntime.InferenceSession("src/models/crepeSmall.onnx")
 
 async def add_exercise_result(user_id: int, exerciseLog: ExerciseLogs):
     db = await anext(get_db())

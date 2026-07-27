@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+
+import onnxruntime
 from fastapi import FastAPI, status, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -12,6 +14,7 @@ from src.auth.router import router as auth_router
 from src.exercises.router import router as exercise_router
 from src.stats.router import router as stats_router
 from src.vocal_analysis.router import router as vocal_analysis_router
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
