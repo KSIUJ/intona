@@ -32,58 +32,6 @@
         current most probable bin: <span id="currentResult"></span>
     </div>
 
-    <script>
-        document.getElementById('start').addEventListener("click", async () => {
-    const socket = new WebSocket("wss://intona-production.up.railway.app/api/vocal_analysis/audio-data");
-
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: {
-        sampleRate: 16000,
-        channelCount: 1,
-            echoCancellation: true,
-            autoGainControl: false,
-            noiseSuppression: true
-    } });
-
-    let audioContext = new AudioContext({sampleRate: 16000});
-    await audioContext.audioWorklet.addModule("realtime_audio_processor.js")
-    const source = audioContext.createMediaStreamSource(stream);
-    const workletNode = new AudioWorkletNode(audioContext, "RealTimeAudioProcessor")
-    const gainNode = audioContext.createGain();
-
-    gainNode.gain.value = 20;
-    source.connect(gainNode);
-    gainNode.connect(workletNode);
-    gainNode.connect(audioContext.destination);
-
-    let chunksCount = 0;
-    let bytesCount = 0;
-
-    workletNode.port.onmessage = (event) => {
-        const audioChunk = event.data;
-        if (socket.readyState === WebSocket.OPEN) {
-            socket.send(audioChunk.slice());
-
-            chunksCount++;
-            bytesCount += audioChunk.byteLength;
-        }
-    };
-
-    setInterval(() => {
-        if (chunksCount > 0) {
-            const kbPerSecond = (bytesCount / 1024).toFixed(2);
-            console.log(`Prędkość: ${chunksCount} paczek/sekundę | Transfer: ${kbPerSecond} KB/s`);
-
-            chunksCount = 0;
-            bytesCount = 0;
-        }
-    }, 1000);
-
-    socket.addEventListener("message", (event) => {
-        console.log("Serwer odpowiada:", event.data);
-        document.getElementById("currentResult").innerHTML="<b>" + event.data + "</b>";
-    });
-});
-
-    </script>
+    <script src="audioProcessing.js"></script>
 </body>
 </html>
