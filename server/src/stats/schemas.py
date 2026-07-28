@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
+from typing import Dict, Any, Optional
 
 class AverageScoreByCategory(BaseModel):
     category: str
@@ -13,7 +14,7 @@ class UserStatsUserResponse(BaseModel):
 
     id: int 
     averageScore: float 
-    averageScoreByCategory: list[dict]
+    averageScoreByCategory: Optional[Dict[str, Any]] = None
     currentStreak: int 
     longestStreak: int 
     masteredPercentage: float 
