@@ -22,12 +22,18 @@ class Settings(BaseSettings):
         """
         By default, Railway provides an address starting with 'postgresql://', 
         but due to the asynchronous database, we need 'postgresql+asyncpg://'.
-        To ensure the code works locally without modification, I check whether the database is PostgreSQL.
-        For local testing, SQLite might be easier to use, and thanks to SQLModel,
-        it won't significantly alter the code's behavior.
         """
         if self.database_url.startswith("postgresql://"):
             return self.database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
         return self.database_url
+    @property
+    def async_test_database_url(self) -> str:
+        """
+        By default, Railway provides an address starting with 'postgresql://', 
+        but due to the asynchronous database, we need 'postgresql+asyncpg://'.
+        """
+        if self.test_database_url.startswith("postgresql://"):
+            return self.test_database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return self.test_database_url
 
 settings = Settings()
