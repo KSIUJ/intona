@@ -87,8 +87,7 @@ function Login(){
 }
 
 function Home() {
-  const navItems = ["Home", "Dashboard"];
-
+ 
   const exercises = [
     "G-major scale",
     "Intervals 2-3",
@@ -105,22 +104,34 @@ function Home() {
     "Song 4",
   ]
   return (
-  <div className="min-h-screen">
-   <nav >
-      <ul className="mx-auto flex max-w-6xl items-center gap-12 h-18">
-        {navItems.map((item) => (
-          <li key={item}>
-            {item}
-          </li>
-        ))}
-      </ul>
-   </nav>
-   <main>
-    <h1>Welcome to Intona!</h1>
-    <div className="grid grid-cols-2 gap-8">
-    <section>
-      <h2>Exercises</h2>
+  <div className="app">
+    <header className="site-header">
+      <a className="brand" href="#home">
+        <span className="brand-icon"></span>
+        <span>INTONA</span>
+      </a>
 
+      <nav className="main-nav">
+        <Link to="/dashboard"> Dashboard</Link>
+        <Link to="/exercises"> Exercises</Link>
+        <Link to="/songs"> Songs</Link>
+      </nav>
+
+      <div className="auth-nav">
+        <button className="login-link" type="button">
+          <Link to="/"> Log in</Link>
+        </button>
+
+        <button className="signup-button" type="button">
+          Sign up
+        </button>
+      </div>
+    </header>
+   <main className="home-page">
+    <h1 className="home-header">Welcome to Intona!</h1>
+    <div className="selection-boxes">
+    <section className="selection-box">
+      <h2 className="selection-title"><Link to="/exercises"> Exercises</Link></h2>
       <ul>
         {exercises.map((exercise) => (
           <li key={exercise}>
@@ -129,8 +140,8 @@ function Home() {
         ))}
       </ul>
     </section>
-    <section>
-    <h2>Songs</h2>
+    <section className="selection-box">
+    <h2 className="selection-title"><Link to="/songs"> Songs</Link></h2>
         <ul>{songs.map((song) => (
           <li key={song}>
             {song}
@@ -156,6 +167,24 @@ function Contact(){
     <h1>Contact</h1>
   );
 }
+
+function Dashboard(){
+    return (
+    <h1>Dashboard</h1>
+  );
+}
+
+function Exercises(){
+  return (
+    <h1>Exercises</h1>
+  );
+}
+
+function Songs(){
+  return (
+    <h1>Songs</h1>
+  );
+}
 function App() {
   return (
     <BrowserRouter>
@@ -164,6 +193,9 @@ function App() {
       <Route path="/home" element={<Home />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/exercises" element={<Exercises />} />
+      <Route path="/songs" element={<Songs />} />
     </Routes>
     </BrowserRouter>
   );

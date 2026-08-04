@@ -268,3 +268,43 @@
     padding: 48px 20px;
   }
 }
+
+.home-header {
+    height: 90px;
+    font-size: large;
+    text-align: left;
+    grid-template-columns: 1fr auto;
+    padding: 0 20px;
+}
+
+.home-page {
+    padding: 48px 60px;
+}
+
+.selection-box {
+  border: 2px solid var(--color-primary);
+  border-radius: 12px;
+  padding: 40px 24px 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  position: relative;
+  min-height: 220px;
+}
+
+.selection-boxes{
+  gap: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.selection-title {
+  border: 2px solid var(--color-primary);
+  background-color: var(--color-primary);
+  color: #f3edff;
+  border-radius: 12px;
+  padding: 12px;
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: pointer;
+  font-weight:bold;
+}
