@@ -1,4 +1,4 @@
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, UTC
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -50,7 +50,7 @@ async def create_user(user: UserCreate, db: SessionDep):
                            longestStreak=0,
                            masteredPercentage=0,
                            exercisesCompleted=0,
-                           lastActivityDate=datetime.now())
+                           lastActivityDate=datetime.now(UTC))
     db.add(user_stats)
     await db.commit()
 
