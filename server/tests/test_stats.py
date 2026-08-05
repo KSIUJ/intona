@@ -48,7 +48,7 @@ async def test_get_user_stats_forbidden_for_other_user(client: AsyncClient):
     user1 = await create_test_user(client, username="user_one", email="user1@example.com")
     user2 = await create_test_user(client, username="user_two", email="user2@example.com")
 
-    token_user1 = await login_user(client, email="user1@example.com")
+    token_user1 = await login_user(client, email=user1["email"])
 
     response = await client.get(
         f"/api/users/{user2['id']}/stats",
