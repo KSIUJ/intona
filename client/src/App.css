@@ -272,9 +272,10 @@
 .home-header {
     height: 90px;
     font-size: large;
-    text-align: left;
+    text-align: center;
     grid-template-columns: 1fr auto;
-    padding: 0 20px;
+    padding: 0 10px;
+    
 }
 
 .home-page {
@@ -307,4 +308,7 @@
   transform: translateX(-50%);
   cursor: pointer;
   font-weight:bold;
+}
+.avatar{
+  left: 70%;
 }
