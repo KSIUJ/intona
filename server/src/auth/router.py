@@ -1,4 +1,4 @@
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, UTC
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -9,7 +9,7 @@ from src.config import settings
 from src.auth.models import User
 from src.auth.schemas import UserCreate, UserPrivate, UserPublic, Token
 from src.auth.utils import hash_password, verify_password, create_access_token
-from src.auth.dependencies import CurrentUser, SessionDep
+from src.auth.dependencies import AdminUser, CurrentUser, SessionDep
 from src.stats.models import UserStats
 from src.exercises.models import ExerciseType
 
@@ -50,7 +50,7 @@ async def create_user(user: UserCreate, db: SessionDep):
                            longestStreak=0,
                            masteredPercentage=0,
                            exercisesCompleted=0,
-                           lastActivityDate=datetime.now())
+                           lastActivityDate=datetime.now(UTC))
     db.add(user_stats)
     await db.commit()
 
@@ -86,7 +86,7 @@ async def get_current_user(current_user: CurrentUser):
 
 # to change later back to response_model=list[UserPublic]
 @router.get("/users", response_model=list[UserPublic])
-async def get_all_users(db: SessionDep):
+async def get_all_users(db: SessionDep, admin: AdminUser):
     result = await db.exec(select(User))
     users = result.all()
 

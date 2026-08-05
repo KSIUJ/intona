@@ -1,4 +1,5 @@
 from datetime import datetime
+from sqlalchemy import DateTime
 from sqlmodel import SQLModel, Field, Column, JSON, Relationship
 
 from src.auth.models import User
@@ -12,7 +13,7 @@ class UserStats(SQLModel, table=True):
     longestStreak: int = Field(nullable=False)
     masteredPercentage: float = Field(nullable=False)
     exercisesCompleted: int = Field(nullable=False)
-    lastActivityDate: datetime = Field(nullable=False)
+    lastActivityDate: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: User = Relationship(back_populates="stats", sa_relationship_kwargs={"lazy": "selectin", "uselist": False})
 

@@ -1,5 +1,12 @@
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+
 *.iml
-.idea
-.venv
+.idea/
+
+.vs/
+
 .env
-.vs
+

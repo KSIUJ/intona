@@ -1,5 +1,5 @@
 from sqlmodel import select, func
-
+from sqlalchemy.orm.attributes import flag_modified
 from src.exercises.models import Exercise
 from src.logs.models import ExerciseLogs
 from src.stats.models import UserStats
@@ -24,17 +24,32 @@ async def add_exercise_result(user_id: int, exerciseLog: ExerciseLogs):
         mastered_count = mastered_count.first() + 1
         exercises_count = await db.exec(select(func.count(Exercise.id)))
         exercises_count = exercises_count.first()
-        detailed_user_stats.masteredPercentage = mastered_count / exercises_count * 100
+        if exercises_count > 0:
+            detailed_user_stats.masteredPercentage = mastered_count / exercises_count * 100
 
-    # count_by_category = await db.exec(select(func.count(ExerciseLogs)).where(ExerciseLogs.attempting_user_id == user_id).where(ExerciseLogs.exercise.type == exerciseLog.exercise.type))
-    # count_by_category = count_by_category.first() + 1
+    exercise_querry = await db.exec(select(Exercise).where(Exercise.id == exerciseLog.exercise_id))
+    exercise = exercise_querry.first()
+    category_id = str(exercise.exercise_type.id)
 
-    # tutaj musisz pomyśleć jak to zrobić aby załapało nam odpowiedni score odpowiedniego category
-    # average_by_category = detailed_user_stats.averageScoreByCategory[id - 1 #exerciseLog.exercise.exercise_type.type]["score"]
-    # tutaj musisz pomyśleć jak to zrobić aby załapało nam odpowiedni score odpowiedniego category
-    # detailed_user_stats.averageScoreByCategory[tutaj daj id - 1 (bo zaczyna sie od zera)]["score"] = (average_by_category * (count_by_category - 1) + exerciseLog.time_in_tune) / (count_by_category)
+    category_scores = dict(detailed_user_stats.averageScoreByCategory or {})
 
+    old_category_stats = category_scores.get(category_id,{"score": 0.0, "count": 0})
+    old_category_score = old_category_stats["score"]
+    old_category_count = old_category_stats["count"]
 
-    await actualize_user_streak(detailed_user_stats)
+    new_category_count = old_category_count + 1
+    new_category_score = (old_category_count * old_category_score + exerciseLog.time_in_tune) / new_category_count
+
+    category_scores[category_id] = {"score": new_category_score, "count": new_category_count}
+
+    detailed_user_stats.averageScoreByCategory = category_scores
+
+    # Without this, the column will not be updated
+    flag_modified(detailed_user_stats, "averageScoreByCategory")
+
+    await actualize_user_streak(detailed_user_stats, db)
+
+    await db.commit()
+    await db.refresh(detailed_user_stats)
 
 

@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, UTC
+from sqlalchemy import DateTime
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -11,7 +12,11 @@ class ExerciseLogs(SQLModel, table=True):
     exercise_duration: int = Field(nullable=False)
     time_in_tune: float = Field(nullable=False)
     average_deviation: float = Field(nullable=False)
-    attempted_at: datetime = Field(nullable=False)
+    attempted_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_type=DateTime(timezone=True),
+        nullable=False
+    )
     attempting_user_id: int = Field(nullable=False, foreign_key="users.id")
 
     user: "User" = Relationship(back_populates="logs")
