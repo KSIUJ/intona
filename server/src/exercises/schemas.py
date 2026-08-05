@@ -1,18 +1,19 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
-class ExerciseTypePublic(BaseModel):
+class ExerciseTypeInfo(BaseModel):
     id: int
     type: str
 
-class ExerciseBase(BaseModel):
+class ExerciseCreate(BaseModel):
     file_name: str
-    path: str
-
-class ExerciseCreate(ExerciseBase):
     type: int
 
-class ExercisePublic(ExerciseBase):
+class ExerciseInfo(BaseModel):
     id: int
-    exercise_type: ExerciseTypePublic
+    file_name: str
+    exercise_type: ExerciseTypeInfo
+
+
+
 
