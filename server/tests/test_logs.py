@@ -1,7 +1,6 @@
 import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
 
 from src.exercises.models import Exercise, ExerciseType
 from src.logs.models import ExerciseLogs
