@@ -107,7 +107,7 @@ document.getElementById('start').addEventListener("click", async () => {
         if (signal.aborted) {
             stream.getAudioTracks().forEach(track => track.stop());
             if (audioContext && audioContext.state !== 'closed') {
-                audioContext.close();
+                await audioContext.close();
             }
             return;
         }
@@ -121,32 +121,26 @@ document.getElementById('start').addEventListener("click", async () => {
         gainNode.connect(audioContext.destination);
 
         let chunksCount = 0;
-        let bytesCount = 0;
 
         workletNode.port.onmessage = (event) => {
             const audioChunk = event.data;
             if (socket.readyState === WebSocket.OPEN) {
                 socket.send(audioChunk.slice());
-
-                chunksCount++;
-                bytesCount += audioChunk.byteLength;
             }
         };
 
 
         const interval = setInterval(() => {
             if (chunksCount > 0) {
-                const kbPerSecond = (bytesCount / 1024).toFixed(2);
-                console.log(`Prędkość: ${chunksCount} paczek/sekundę | Transfer: ${kbPerSecond} KB/s`);
-
+                console.log(`Prędkość: ${chunksCount} paczek/sekundę `);
                 chunksCount = 0;
-                bytesCount = 0;
             }
         }, 1000);
 
         socket.addEventListener("message", (event) => {
             console.log("Serwer odpowiada:", event.data);
             document.getElementById("currentResult").innerHTML = "<b>" + event.data + "</b>";
+            chunksCount++;
         });
 
         controller.signal.addEventListener("abort", () => {
