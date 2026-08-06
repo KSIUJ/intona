@@ -13,7 +13,7 @@ class ExerciseType(SQLModel, table=True):
 class Exercise(SQLModel, table=True):
     __tablename__ = "exercises"
     id: int | None = Field(default=None, primary_key=True)
-    file_name: str = Field(nullable=False, unique=True)
+    exercise_name: str = Field(nullable=False, unique=True)
 
     type: int = Field(nullable=False, foreign_key="exercise_types.id")
     processed: bool = Field(default=False, nullable=False)

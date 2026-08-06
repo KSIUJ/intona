@@ -6,12 +6,12 @@ class ExerciseTypeInfo(BaseModel):
     type: str
 
 class ExerciseCreate(BaseModel):
-    file_name: str
+    exercise_name: str
     type: int
 
 class ExerciseInfo(BaseModel):
     id: int
-    file_name: str
+    exercise_name: str
     exercise_type: ExerciseTypeInfo
 
 

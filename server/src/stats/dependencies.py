@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import Depends
 from sqlmodel import select
 
-from src.database import get_db, SessionDep
+from src.database import SessionDep
 from src.stats.models import UserStats
 
 
