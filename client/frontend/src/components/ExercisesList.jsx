@@ -1,5 +1,5 @@
-import {Link, Route, Routes} from 'react-router-dom'
-import {useQuery} from '@tanstack/react-query';
+import { Link, Route, Routes } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query';
 import OngoingExercise from './OngoingExercise.jsx'
 
 
@@ -25,14 +25,14 @@ export default function ExercisesList() {
                 element={
                     <nav>
                         {data.map((exercise) => (
-                            <Link key={exercise.id} to={`exercises/${exercise.id}`}>
+                            <Link key={exercise.id} to={`${exercise.id}`}>
                                 Exercise {exercise.id}
                             </Link>
                         ))}
                     </nav>
                 } />
 
-            <Route path="exercises/:id" element={<OngoingExercise />} />
+            <Route path=":id" element={<OngoingExercise />} />
         </Routes>
     )
 }

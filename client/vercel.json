@@ -1,26 +1,33 @@
 {
-    "services": {
-        "web": {
-            "root": "frontend"
-        },
-        "api": {
-            "root": "backend",
-            "entrypoint": "index.js",
-            "framework": "express"
+  "services": {
+    "web": {
+      "root": "frontend",
+      "rewrites": [
+        {
+          "source": "/(.*)",
+          "destination": "/index.html"
         }
+      ]
     },
-    "rewrites": [
-        {
-            "source": "/api/(.*)",
-            "destination": {
-                "service": "api"
-            }
-        },
-        {
-            "source": "/(.*)",
-            "destination": {
-                "service": "web"
-            }
-        }
-    ]
+    "api": {
+      "root": "backend",
+      "entrypoint": "index.js",
+      "framework": "express"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "web",
+        "path": "index.html"
+      }
+    }
+  ]
 }
