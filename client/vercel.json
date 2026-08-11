@@ -1,0 +1,26 @@
+{
+    "services": {
+        "web": {
+            "root": "frontend"
+        },
+        "api": {
+            "root": "backend",
+            "entrypoint": "index.js",
+            "framework": "express"
+        }
+    },
+    "rewrites": [
+        {
+            "source": "/api/(.*)",
+            "destination": {
+                "service": "api"
+            }
+        },
+        {
+            "source": "/(.*)",
+            "destination": {
+                "service": "web"
+            }
+        }
+    ]
+}
