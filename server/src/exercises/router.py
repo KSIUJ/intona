@@ -1,7 +1,14 @@
 import json
 import logging
+from typing import Annotated
+import sys
 
-from fastapi import APIRouter, HTTPException, Form
+# Wymuszenie natychmiastowego zrzutu po każdej linijce
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
+
+
+from fastapi import APIRouter, HTTPException, Form, Cookie
 from sqlmodel import select
 
 from src.auth.dependencies import CurrentUser
@@ -20,7 +27,7 @@ logging.basicConfig(level=logging.INFO)
 # when im done testing I need to put detailed exercise info as a response model
 
 
-@router.get("/", response_model=list[ExerciseInfo])
+@router.get("", response_model=list[ExerciseInfo])
 async def get_exercises(session: SessionDep):
     """
     Returns a list of all available exercises

@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta, datetime, UTC
 from typing import Annotated
 
@@ -12,6 +13,8 @@ from src.auth.utils import hash_password, verify_password, create_access_token
 from src.auth.dependencies import AdminUser, CurrentUser, SessionDep
 from src.stats.models import UserStats
 from src.exercises.models import ExerciseType
+
+logging.basicConfig(level=logging.INFO)
 
 router = APIRouter()
 
@@ -102,6 +105,8 @@ async def login_for_access_token(
     ```
     **HTTP STATUS 401** -> when username doesn't exist, or email doesn't exist
     """
+    logging.error(form_data.username)
+    logging.error(form_data.password)
     result = await db.exec(
         select(User).where(func.lower(User.email) == form_data.username.lower())
     )

@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -8,6 +9,8 @@ from src.auth.models import User
 from src.auth.utils import verify_access_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/token")
+
+logging.basicConfig(level=logging.INFO)
 
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
