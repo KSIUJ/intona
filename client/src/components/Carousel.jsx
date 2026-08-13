@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import Chip from '@mui/material/Chip';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
+import CardActionArea from '@mui/material/CardActionArea';
 import Typography from '@mui/material/Typography';
 
 
@@ -37,8 +38,12 @@ export let songs = [
 
 export const ExerciseCard = ({ title, slug, difficulty, rating, linkBase }) => {
   return (
-    <Card className='carousel-card'>
-      <Link to={`${linkBase}/${slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+    <Card className="carousel-card">
+      <CardActionArea
+        component={Link}
+        to={`${linkBase}/${slug}`}
+        sx={{ height: '100%' }}
+      >
         <CardContent
           sx={{
             display: 'flex',
@@ -61,7 +66,7 @@ export const ExerciseCard = ({ title, slug, difficulty, rating, linkBase }) => {
             {rating}
           </Typography>
         </CardContent>
-      </Link>
+      </CardActionArea>
     </Card>
   );
 };
@@ -112,6 +117,4 @@ const Carousel = ({isSong, title}) => {
     </section>
   );
 };
-
-
 export default Carousel;
