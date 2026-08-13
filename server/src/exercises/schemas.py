@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from src.exercises.enums import DifficultyEnum
+
 
 class ExerciseTypeInfo(BaseModel):
     id: int
@@ -12,6 +14,8 @@ class ExerciseCreate(BaseModel):
 class ExerciseInfo(BaseModel):
     id: int
     exercise_name: str
+    difficulty: DifficultyEnum
+    rating: int
     exercise_type: ExerciseTypeInfo
 
 

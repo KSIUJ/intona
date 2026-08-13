@@ -1,5 +1,7 @@
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import Column
+from sqlmodel import Field, Relationship, SQLModel, Enum as SQLModelEnum
 
+from src.exercises.enums import DifficultyEnum, enum_values
 from src.logs.models import ExerciseLogs
 
 class ExerciseType(SQLModel, table=True):
@@ -14,6 +16,12 @@ class Exercise(SQLModel, table=True):
     __tablename__ = "exercises"
     id: int | None = Field(default=None, primary_key=True)
     exercise_name: str = Field(nullable=False, unique=True)
+    slug: str = Field(nullable=False)
+    difficulty: DifficultyEnum = Field(sa_column=Column(
+            nullable=False,
+            type_= SQLModelEnum(DifficultyEnum, values_callable=enum_values),
+        ))
+    rating: int = Field(nullable=False, default=0)
 
     type: int = Field(nullable=False, foreign_key="exercise_types.id")
     processed: bool = Field(default=False, nullable=False)
