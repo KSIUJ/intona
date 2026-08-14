@@ -17,7 +17,7 @@ class User(SQLModel, table=True):
     email: str = Field(unique=True, index=True, nullable=False)
     password_hash: str = Field(nullable=False)
 
-    user_type_id: int = Field(nullable=False, foreign_key="users_type.id")
+    user_type_id: int = Field(nullable=False, default=2, foreign_key="users_type.id")
     # in the near future i will change this to lazy loading now it is eager loading
     type: UserType = Relationship(back_populates="users", sa_relationship_kwargs={"lazy": "selectin"})
     stats: "UserStats" = Relationship(back_populates="user",sa_relationship_kwargs={"lazy": "selectin", "uselist": False} )

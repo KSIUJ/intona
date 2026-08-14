@@ -1,4 +1,6 @@
 import "./Dashboard.css";
+import { Link } from "react-router-dom";
+
 
 function HomeIcon() {
   return (
@@ -152,26 +154,26 @@ function Dashboard() {
         </button>
 
         <nav className="sidebar-navigation">
-          <a className="sidebar-link" href="#home">
+          <Link className="sidebar-link" to="/home">
             <span className="sidebar-icon">
               <HomeIcon />
             </span>
             <span>Home</span>
-          </a>
+          </Link>
 
-          <a className="sidebar-link" href="#just-sing">
+          <Link className="sidebar-link" to="/just-sing">
             <span className="sidebar-icon">
               <SingIcon />
             </span>
             <span>Just sing</span>
-          </a>
+          </Link>
 
-          <a className="sidebar-link active" href="#dashboard">
+          <Link className="sidebar-link active" to="/dashboard">
             <span className="sidebar-icon">
               <DashboardIcon />
             </span>
             <span>Dashboard</span>
-          </a>
+          </Link>
         </nav>
       </aside>
 

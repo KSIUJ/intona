@@ -1,26 +1,23 @@
-.vercel
-.env*
-# Logs
-logs
-*.log
+# Zależności (dla głównego folderu i podfolderów)
+node_modules/
+proxy-server/node_modules/
+
+# Pliki środowiskowe (zmienne, klucze API)
+.env
+.env.local
+.env.*.local
+
+# Build (wynik budowania przez Vite / React)
+dist/
+build/
+
+# Cache i narzędzia Vercela
+.vercel/
+
+# Inne logi systemowe i błędy npm
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+.vercel
+.env*
