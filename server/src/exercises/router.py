@@ -135,8 +135,6 @@ async def start_exercise(exercise_id: int, user: CurrentUser, session: SessionDe
     exercise = exercise.first()
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")
-    if not exercise.processed:
-        raise HTTPException(status_code=409, detail="Exercise is not processed")
     presigned_url = bucket_client.generate_presigned_url(
         "get_object",
         Params={"Bucket": settings.bucket_name, "Key": f"exercise/{exercise_id}/vocal.wav"},

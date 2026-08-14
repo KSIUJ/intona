@@ -1,6 +1,6 @@
-import { useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import {useEffect} from "react";
+import {useParams} from "react-router-dom";
+import {useQuery} from "@tanstack/react-query";
 
 import useAudio from '../hooks/useAudio'
 
@@ -17,7 +17,7 @@ const fetchURL = async (id) => {
 export default function OngoingExercise() {
     const params = useParams();
 
-    const { data, isError, isLoading } = useQuery({
+    const {data, isError, isLoading} = useQuery({
         queryKey: ["exercises", params.id],
         queryFn: () => fetchURL(params.id),
         staleTime: 1000 * 60 * 5,
@@ -46,13 +46,13 @@ export default function OngoingExercise() {
         }
     }, [audio])
 
+
     if (isLoading) {
         return "Loading"
     }
     if (isError) {
         return "Error"
     }
-
 
     return (<></>)
 

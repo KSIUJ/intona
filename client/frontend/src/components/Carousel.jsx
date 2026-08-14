@@ -36,13 +36,13 @@ export let songs = [
 
 
 
-export const ExerciseCard = ({ title, slug, difficulty, rating, linkBase }) => {
+export const ExerciseCard = ({ id, title, slug, difficulty, rating, linkBase }) => {
 
   return (
     <Card className="carousel-card">
       <CardActionArea
         component={Link}
-        to={`${linkBase}/${slug}`}
+        to={`${linkBase}/${id}/${slug}`}
         sx={{ height: '100%' }}
       >
         <CardContent
@@ -124,6 +124,7 @@ const Carousel = ({isSong, title}) => {
           {rows?.map((row) => (
             <ExerciseCard
               key={row.id}
+              id={row.id}
               title={row.exercise_name}
               slug={row.slug}
               difficulty={row.difficulty}

@@ -6,6 +6,7 @@ import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import ExercisePage from "./pages/ExercisePage";
 import SongsPage from "./pages/SongsPage";
+import OngoingExercise from "./components/OngoingExercise.jsx";
 
 const queryClient = new QueryClient();
 
@@ -18,9 +19,9 @@ function App() {
                     <Route path="/home" element={<Home/>}/>
                     <Route path="/dashboard" element={<Dashboard/>}/>
                     <Route path="/exercises" element={<ExercisePage/>}/>
-                    <Route path="/exercises/:exerciseSlug" element={<ExercisePage/>}/>
-                    <Route path="/songs/:songsSlug" element={<SongsPage/>}/>
-
+                    <Route path="/exercises/:id/:exerciseSlug" element={<ExercisePage/>}/>
+                    <Route path="/exercises/:id/:exerciseSlug/start" element={<OngoingExercise/>}/>
+                    <Route path="/songs/:id/:songsSlug" element={<SongsPage/>}/>
                 </Routes>
             </BrowserRouter>
         </QueryClientProvider>

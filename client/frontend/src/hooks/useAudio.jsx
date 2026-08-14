@@ -8,6 +8,9 @@ export default function useAudio(presigned_url) {
     const audio = useRef(null);
 
     useEffect(() => {
+        if (!presigned_url) {
+            return;
+        }
         const handleEndEvent = () => {
             setEnded(true);
             setPlaying(false);
@@ -23,20 +26,23 @@ export default function useAudio(presigned_url) {
         }
     }, [presigned_url])
 
-    function Toggle() {
-
+    async function Toggle() {
+        if (!presigned_url) {
+            return;
+        }
         if (isPlaying) {
-            console.log("pause")
             audio.current.pause();
         } else {
-            console.log("play")
-            audio.current.play();
+            await audio.current.play();
         }
         setPlaying(!isPlaying);
 
     }
 
     function ChangeVolume(step) {
+        if (!presigned_url) {
+            return;
+        }
         if (step > 0) {
             step = 0.05;
             audio.current.volume = Math.min(1, audio.current.volume + step);
@@ -47,6 +53,5 @@ export default function useAudio(presigned_url) {
         }
         console.log(audio.current.volume)
     }
-
     return { Toggle, ChangeVolume, isPlaying, hasEnded };
 }
