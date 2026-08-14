@@ -1,10 +1,21 @@
-import "./App.css";
+import { Link } from "react-router-dom";
 
-function App() {
-  function handleSubmit(event) {
-    event.preventDefault();
-  }
+const Login = () => {
+  const getToken = async (formData) => {
+        try {
+            const response = await fetch("/api/auth/token", {
+                method: "POST",
+                body: formData, // FormData jest wysyłana bezpośrednio jako body
+            });
 
+            if (!response.ok) {
+                throw new Error(`Błąd logowania: ${response.status}`);
+            }
+
+        } catch (error) {
+            console.error("Wystąpił błąd:", error.message);
+        }
+    }
   return (
   <div className="app">
     <header className="site-header">
@@ -14,9 +25,9 @@ function App() {
       </a>
 
       <nav className="main-nav">
-        <a href="#home">Home</a>
-        <a href="#about">About us</a>
-        <a href="#contact">Contact</a>
+        <Link to="/home"> Home</Link>
+        <Link to="/about">About us</Link>
+        <Link to="/contact">Contact</Link>
       </nav>
 
       <div className="auth-nav">
@@ -40,7 +51,7 @@ function App() {
           <p>Welcome back! Please enter your details.</p>
         </header>
 
-        <form className="login-form" onSubmit={handleSubmit}>
+        <form className="login-form" action={getToken}>
           <div className="form-group">
             <label htmlFor="email">Email</label>
 
@@ -83,6 +94,6 @@ function App() {
     </main>
   </div>
 );
-}
 
-export default App;
+}
+export default Login;
