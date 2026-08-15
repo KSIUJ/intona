@@ -153,7 +153,7 @@ async def logout(db: SessionDep, refresh_token: str = Form()):
     * **refresh_token**: `str` -> refresh token to delete
 
     ### Returns:
-    ** HTTP STATUS 200 **
+    * ** HTTP STATUS 200 **
     """
     refresh_token_db = await db.exec(select(RefreshToken).where(RefreshToken.payload == refresh_token))
     refresh_token_db = refresh_token_db.one()
@@ -269,7 +269,7 @@ async def get_user(user_id: int, db: SessionDep):
     * **id**: `int` -> user id
     * **username**: `str` -> user username
 
-    **HTTP STATUS 404** -> User not found
+    * **HTTP STATUS 404** -> User not found
     """
     result = await db.exec(select(User).where(User.id == user_id))
     user = result.first()
