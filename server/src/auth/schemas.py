@@ -29,4 +29,7 @@ class Token(BaseModel):
     access_token:str
     token_type:str
 
+class Tokens(BaseModel):
+    access_token:Token
+    refresh_token: str
 
