@@ -5,6 +5,16 @@ import Carousel from "../components/Carousel";
 
 
 const Home = () => {
+  const Logout = async () => {
+    const response = await fetch(`/api/auth/logout`, {
+      credentials: 'include',
+      method: 'POST'
+    })
+    if (!response.ok) {
+      console.log(`${response.status} ${response.statusText}`)
+    }
+  }
+
   const [open, setOpen] = useState(false);
 
   return (
@@ -29,7 +39,7 @@ const Home = () => {
               <button type="button">
                 <Link to="/dashboard">Dashboard</Link>
               </button>
-              <button type="button">
+              <button type="button" onClick={Logout}>
                 <Link to="/">Log out</Link>
               </button>
             </div>

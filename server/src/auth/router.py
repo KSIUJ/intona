@@ -1,14 +1,15 @@
 import logging
+import uuid
 from datetime import timedelta, datetime, UTC
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import select, func
 
 from src.config import settings
-from src.auth.models import User
-from src.auth.schemas import UserCreate, UserPrivate, UserPublic, Token
+from src.auth.models import User, RefreshToken
+from src.auth.schemas import UserCreate, UserPrivate, UserPublic, Token, Tokens
 from src.auth.utils import hash_password, verify_password, create_access_token
 from src.auth.dependencies import AdminUser, CurrentUser, SessionDep
 from src.stats.models import UserStats
@@ -81,10 +82,13 @@ async def create_user(user: UserCreate, db: SessionDep):
 
     return new_user
 
-@router.post("/token", response_model=Token)
+
+
+@router.post("/token", response_model=Tokens)
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: SessionDep,
+    remember_login: str = Form()
 ):
     """
     Verifies whether typed username and password are correct
@@ -105,8 +109,7 @@ async def login_for_access_token(
     ```
     **HTTP STATUS 401** -> when username doesn't exist, or email doesn't exist
     """
-    logging.error(form_data.username)
-    logging.error(form_data.password)
+    remember_login = True if remember_login == "true" else False
     result = await db.exec(
         select(User).where(func.lower(User.email) == form_data.username.lower())
     )
@@ -120,11 +123,63 @@ async def login_for_access_token(
         )
 
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
-    access_token = create_access_token(
+    access_token_payload = create_access_token(
         data={"sub": str(user.id)},
         expires_delta=access_token_expires,
     )
-    return Token(access_token=access_token, token_type="bearer")
+    refresh_token_payload = str(user.id) + "-" + str(uuid.uuid4())
+    access_token = Token(access_token=access_token_payload, token_type="bearer")
+    refresh_token = RefreshToken(user_id=user.id, payload=refresh_token_payload, created_at=datetime.now(UTC), expires_at=datetime.now(UTC) + timedelta(days=30) if remember_login == True else datetime.now(UTC) + timedelta(hours=12))
+
+    db.add(refresh_token)
+    await db.commit()
+
+    return Tokens(access_token=access_token, refresh_token=refresh_token_payload)
+
+@router.post("/logout")
+async def logout(db: SessionDep, refresh_token: str = Form()):
+    refresh_token_db = await db.exec(select(RefreshToken).where(RefreshToken.payload == refresh_token))
+    refresh_token_db = refresh_token_db.one()
+
+    if not refresh_token_db:
+        return
+
+    await db.delete(refresh_token_db)
+    await db.commit()
+
+
+@router.post("/refresh", response_model=Token)
+async def refresh_access_token(db: SessionDep, refresh_token: str = Form()):
+    refresh_token_db = await db.exec(select(RefreshToken).where(RefreshToken.payload == refresh_token))
+    refresh_token_db: RefreshToken = refresh_token_db.one()
+
+    if refresh_token_db.expires_at < datetime.now(UTC):
+        await db.delete(refresh_token_db)
+        await db.commit()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Refresh token expired",
+        )
+
+    if not refresh_token_db:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Refresh token not found",
+        )
+
+    user_id = refresh_token.split("-")[0]
+    logging.info(user_id)
+
+    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+    access_token_payload = create_access_token(
+        data={"sub": str(user_id)},
+        expires_delta=access_token_expires,
+    )
+
+    return Token(access_token=access_token_payload, token_type="bearer")
+
+
 
 @router.get("/me", response_model=UserPrivate)
 async def get_current_user(current_user: CurrentUser):
