@@ -16,7 +16,6 @@ class Exercise(SQLModel, table=True):
     exercise_name: str = Field(nullable=False, unique=True)
 
     type: int = Field(nullable=False, foreign_key="exercise_types.id")
-    processed: bool = Field(default=False, nullable=False)
 
     exercise_type: ExerciseType = Relationship(back_populates="exercises", sa_relationship_kwargs={"lazy": "selectin"})
     exercise_logs: list[ExerciseLogs] = Relationship(back_populates="exercise", sa_relationship_kwargs={"lazy": "selectin"})

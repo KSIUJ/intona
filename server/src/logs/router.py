@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
+from sqlmodel import select
 
 from src.auth.dependencies import CurrentUser
 from src.database import SessionDep
@@ -34,7 +35,8 @@ async def create_log(session: SessionDep,
 
     # should we change this to session.exec(select(Exercise).where(Exercise.id == log_data.exercise_id))
     # or maybe we should change every other query with this format to session.get...?
-    exercise = await session.get(Exercise, log_data.exercise_id)
+    exercise = await session.exec(select(Exercise).where(Exercise.id == log_data.exercise_id))
+    exercise = exercise.one()
     if not exercise:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
