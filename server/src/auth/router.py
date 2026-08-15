@@ -91,7 +91,8 @@ async def login_for_access_token(
     remember_login: str = Form()
 ):
     """
-    Verifies whether typed username and password are correct
+    Verifies whether typed username and password are correct and if valid returns refresh token and
+    access token in json format
 
     Data should be typed as a form-data
 
@@ -103,8 +104,13 @@ async def login_for_access_token(
     JSON encoded data in format mentioned below:
     ```json
     {
-        "access_token": "str -> access token",
-        "token_type": "str -> token type e.g. bearer"
+        "access_token": {
+            "access_token": "str -> access token",
+            "token_type": "str -> token type e.g. bearer"
+        },
+        "refresh_token": "str -> refresh token"
+
+
     }
     ```
     **HTTP STATUS 401** -> when username doesn't exist, or email doesn't exist
@@ -138,6 +144,17 @@ async def login_for_access_token(
 
 @router.post("/logout")
 async def logout(db: SessionDep, refresh_token: str = Form()):
+    """
+    Deletes refresh token in database so that logout works
+
+    Data should be typed as a form-data
+
+    ### Parameters:
+    * **refresh_token**: `str` -> refresh token to delete
+
+    ### Returns:
+    ** HTTP STATUS 200 **
+    """
     refresh_token_db = await db.exec(select(RefreshToken).where(RefreshToken.payload == refresh_token))
     refresh_token_db = refresh_token_db.one()
 
@@ -150,6 +167,24 @@ async def logout(db: SessionDep, refresh_token: str = Form()):
 
 @router.post("/refresh", response_model=Token)
 async def refresh_access_token(db: SessionDep, refresh_token: str = Form()):
+    """
+    Refreshes access token using refresh_token
+
+    Data should be typed as a form-data
+
+    ### Parameters:
+    * **refresh_token**: `str` -> refresh token which is used to check if user should be able to generate new access token
+
+    ### Returns:
+    JSON encoded data in format mentioned below:
+    ```json
+    {
+        "access_token": "str -> access token",
+        "token_type": "str -> token type e.g. bearer"
+    }
+    **HTTP STATUS 400** -> if the token which you have is expired
+    **HTTP STATUS 401** -> when the token doesn't exist or someone deleted it using logout
+    """
     refresh_token_db = await db.exec(select(RefreshToken).where(RefreshToken.payload == refresh_token))
     refresh_token_db: RefreshToken = refresh_token_db.one()
 
