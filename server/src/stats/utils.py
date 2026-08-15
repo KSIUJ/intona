@@ -1,6 +1,5 @@
 from datetime import datetime, UTC
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.database import get_db
 from src.stats.models import UserStats
 
 # it will be called when exercise is completed

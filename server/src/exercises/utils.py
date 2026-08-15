@@ -1,8 +1,10 @@
 import logging
 import sys
 
+
 from fastapi import UploadFile, File, HTTPException
 from sqlmodel import select
+from sqlalchemy.exc import IntegrityError, DataError, OperationalError
 
 from src.config import settings
 from src.database import SessionDep
@@ -24,12 +26,12 @@ async def validate_exercise(file: UploadFile = File(...)):
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(status_code=415, detail="Unsupported file type.")
 
-async def check_exercise_availability(session: SessionDep, file_name : str):
-    duplicate_exercise = await session.exec(select(Exercise).where(Exercise.file_name == file_name))
+async def check_exercise_availability(session: SessionDep, exercise_name : str):
+    duplicate_exercise = await session.exec(select(Exercise).where(Exercise.exercise_name == exercise_name))
     duplicate_exercise = duplicate_exercise.first()
-    if not duplicate_exercise:
+    if duplicate_exercise:
         raise HTTPException(status_code=409, detail="Exercise with this name already exists")
-
+    return
 async def request_access():
     #it should only return presigned post so user can post exercise
     # on specified bucket
@@ -37,17 +39,24 @@ async def request_access():
     return presigned_post
 
 
-async def register_exercise(session: SessionDep, file_name: str, file_path: str, exercise_type: int):
-    new_exercise = Exercise(file_name=file_name, type=exercise_type)
-    session.add(new_exercise)
-    await session.commit()
-    await session.refresh(new_exercise)
+async def register_exercise(session: SessionDep, exercise_name: str, file_path: str, exercise_type: int):
+    try:
+        new_exercise = Exercise(exercise_name=exercise_name, type=exercise_type)
+        session.add(new_exercise)
+        await session.flush()
 
-    # for what I understand it should always return not none id
-    exercise_id = new_exercise.id
+        # for what I understand it should always return not none id
+        exercise_id = new_exercise.id
 
-    process_exercise_info = ProcessExercise(exercise_name=file_name, exercise_id=exercise_id, exercise_path=file_path, status="waiting")
-    session.add(process_exercise_info)
-    await session.commit()
+        process_exercise_info = ProcessExercise(exercise_name=exercise_name, exercise_id=exercise_id, exercise_path=file_path, status="waiting")
+        session.add(process_exercise_info)
+        await session.commit()
+    except IntegrityError as e:
+        raise HTTPException(status_code=409, detail="Exercise with this name already exists")
+    except DataError as e:
+        raise HTTPException(status_code=422, detail="Data is not valid")
+    except OperationalError as e:
+        raise HTTPException(status_code=500, detail="Problem with database connection")
+
 
 

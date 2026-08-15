@@ -1,5 +1,4 @@
 import boto3
-import botocore
 from botocore.config import Config
 from mypy_boto3_s3 import S3Client
 

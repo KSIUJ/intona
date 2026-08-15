@@ -17,28 +17,50 @@ router = APIRouter()
 
 @router.post("/register", response_model=UserPrivate, status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserCreate, db: SessionDep):
+    """
+    Creates new user and detailed stats for this user
+
+    ### Parameters:
+    * **username**: `str` -> name of user
+    * **email**: `str` -> email of user
+    * **password**: `str` -> password of user
+    * **user_type_id**: `int` -> id of user type, which has members mentioned below:
+        * admin: 1
+        * user: 2
+
+    ### Returns:
+    **UserPrivate** encoded in JSON, which has mentioned Fields
+    * **id**: `int` -> user id
+    * **username**: `str` -> user username
+    * **email**: `str` -> user email
+    * **type**: `str` -> string interpretation of type: int, which has mentioned members:
+        1) admin
+        2) user
+
+    **HTTP STATUS 409** -> when username already exists, or email already exists
+    """
     result = await db.exec(
         select(User).where(func.lower(User.username) == user.username.lower())
     )
     if result.first():
-        raise HTTPException(status_code=400, detail="Username already exists")
+        raise HTTPException(status_code=409, detail="Username already exists")
 
     result = await db.exec(
         select(User).where(func.lower(User.email) == user.email.lower())
     )
     if result.first():
-        raise HTTPException(status_code=400, detail="Email already exists")
+        raise HTTPException(status_code=409, detail="Email already exists")
 
     new_user = User(
         username=user.username,
         email=user.email.lower(),
         password_hash=hash_password(user.password),
-        user_type_id=user.user_type_id,
+        user_type_id=user.user_type_id
     )
 
     db.add(new_user)
-    await db.commit()
-    await db.refresh(new_user)
+    # we don't need to commit instantly, it would be better to commit this all at once(at the end)
+    await db.flush()
 
     exercise_types = await db.exec(select(ExerciseType))
     exercise_types = exercise_types.all()
@@ -61,6 +83,25 @@ async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: SessionDep,
 ):
+    """
+    Verifies whether typed username and password are correct
+
+    Data should be typed as a form-data
+
+    ### Parameters:
+    * **username**: `str` -> user username
+    * **password**: `str` -> user password
+
+    ### Returns:
+    JSON encoded data in format mentioned below:
+    ```json
+    {
+        "access_token": "str -> access token",
+        "token_type": "str -> token type e.g. bearer"
+    }
+    ```
+    **HTTP STATUS 401** -> when username doesn't exist, or email doesn't exist
+    """
     result = await db.exec(
         select(User).where(func.lower(User.email) == form_data.username.lower())
     )
@@ -82,18 +123,59 @@ async def login_for_access_token(
 
 @router.get("/me", response_model=UserPrivate)
 async def get_current_user(current_user: CurrentUser):
+    """
+    Returns current user as UserPrivate object:
+
+    ### Parameters:
+    * **token**: token received from authorization code should be in Authorization Header
+
+    ### Returns:
+    **UserPrivate** encoded in JSON, which has mentioned Fields
+    * **id**: `int` -> user id
+    * **username**: `str` -> user username
+    * **email**: `str` -> user email
+    * **type**: `str` -> string interpretation of type: int, which has mentioned members:
+        1) admin
+        2) user
+    """
     return current_user
 
 # to change later back to response_model=list[UserPublic]
 @router.get("/users", response_model=list[UserPublic])
 async def get_all_users(db: SessionDep, admin: AdminUser):
+    """
+    Returns list of all users if user has admin permissions
+
+    ### Parameters:
+    * **token**: token received from authorization code should be in Authorization Header
+
+    ### Returns:
+    User list, in which each User is returned as **UserPublic** object encoded in JSON with Fields mentioned below:
+    * **id**: `int` -> user id
+    * **username**: `str` -> user username
+    """
     result = await db.exec(select(User))
     users = result.all()
 
     return users
 
+
+#
 @router.get("/{user_id}", response_model=UserPublic)
 async def get_user(user_id: int, db: SessionDep):
+    """
+    Returns specified with {user_id} as UserPublic object
+
+    ### Parameters:
+    * **user_id**: `int` -> id of user which we want to get
+
+    ### Returns:
+    **UserPublic** encoded in JSON, which has mentioned Fields
+    * **id**: `int` -> user id
+    * **username**: `str` -> user username
+
+    **HTTP STATUS 404** -> User not found
+    """
     result = await db.exec(select(User).where(User.id == user_id))
     user = result.first()
 
