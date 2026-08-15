@@ -1,7 +1,11 @@
 from datetime import UTC, datetime, timedelta
 import jwt
 from pwdlib import PasswordHash
+from sqlmodel import select
+
+from src.auth.models import RefreshToken
 from src.config import settings
+from src.database import get_db
 
 password_hash = PasswordHash.recommended()
 
@@ -41,3 +45,12 @@ def verify_access_token(token: str) -> str | None:
         return None
     else:
         return payload.get("sub")
+
+async def delete_expired_tokens():
+    async for db in get_db():
+        tokens_to_delete = await db.exec(select(RefreshToken).where(RefreshToken.expires_at < datetime.now(UTC)))
+        tokens_to_delete = tokens_to_delete.all()
+
+        for token in tokens_to_delete:
+            await db.delete(token)
+        await db.commit()

@@ -1,3 +1,5 @@
+import logging
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, status, Request
@@ -6,8 +8,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlmodel import SQLModel
-import logging
 
+from src.auth.utils import delete_expired_tokens
 from src.database import engine
 from src.auth.router import router as auth_router
 from src.exercises.router import router as exercise_router
@@ -18,6 +20,9 @@ from src.logs.router import router as logs_router
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(delete_expired_tokens, "interval", seconds=600)
+    scheduler.start()
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
     yield
