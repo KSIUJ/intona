@@ -1,7 +1,7 @@
 import logging
 import uuid
 from datetime import timedelta, datetime, UTC
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Form
 from fastapi.security import OAuth2PasswordRequestForm
@@ -70,15 +70,20 @@ async def create_user(user: UserCreate, db: SessionDep):
     exercise_types = exercise_types.all()
 
     user_stats = UserStats(id=new_user.id,
-                           averageScore=0,
-                           averageScoreByCategory={exercise.type: 0 for exercise in exercise_types},
-                           currentStreak=0,
-                           longestStreak=0,
-                           masteredPercentage=0,
-                           exercisesCompleted=0,
-                           lastActivityDate=datetime.now(UTC))
+                           average_score=0,
+                           average_score_by_category={exercise.type: {"score": 0, "count": 0} for exercise in exercise_types},
+                           current_streak=0,
+                           longest_streak=0,
+                           mastered_percentage=0,
+                           exercises_completed=0,
+                           total_practice_time=0,
+                           days_active=0,
+                           favorite_exericse=None,
+                           last_activity_date=datetime.now(UTC))
     db.add(user_stats)
     await db.commit()
+    await db.refresh(new_user)
+
 
     return new_user
 
@@ -155,14 +160,17 @@ async def logout(db: SessionDep, refresh_token: str = Form()):
     ### Returns:
     * ** HTTP STATUS 200 **
     """
-    refresh_token_db = await db.exec(select(RefreshToken).where(RefreshToken.payload == refresh_token))
-    refresh_token_db = refresh_token_db.one()
-
-    if not refresh_token_db:
+    if refresh_token != "NONE":
+        refresh_token_db = await db.exec(select(RefreshToken).where(RefreshToken.payload == refresh_token))
+        refresh_token_db = refresh_token_db.one()
+        if not refresh_token_db:
+            return
+        await db.delete(refresh_token_db)
+        await db.commit()
+    else:
         return
 
-    await db.delete(refresh_token_db)
-    await db.commit()
+
 
 
 @router.post("/refresh", response_model=Token)
