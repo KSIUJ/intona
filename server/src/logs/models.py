@@ -1,7 +1,13 @@
+
 from datetime import datetime, UTC
 from sqlalchemy import DateTime
 from sqlmodel import SQLModel, Field, Relationship
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.auth.models import User
+    from src.exercises.models import Exercise
 
 
 

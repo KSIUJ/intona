@@ -1,8 +1,15 @@
+
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Column
 from sqlmodel import Field, Relationship, SQLModel, Enum as SQLModelEnum
 
 from src.exercises.enums import DifficultyEnum, enum_values
-from src.logs.models import ExerciseLogs
+
+
+if TYPE_CHECKING:
+    from src.logs.models import ExerciseLogs
+    from src.stats.models import UserStats
 
 class ExerciseType(SQLModel, table=True):
     __tablename__ = "exercise_types"
@@ -19,14 +26,15 @@ class Exercise(SQLModel, table=True):
     slug: str = Field(nullable=False)
     difficulty: DifficultyEnum = Field(sa_column=Column(
             nullable=False,
-            type_= SQLModelEnum(DifficultyEnum, values_callable=enum_values),
+            type_= SQLModelEnum(DifficultyEnum, values_callable=enum_values, name="difficulty"),
+
         ))
     rating: int = Field(nullable=False, default=0)
-
     type: int = Field(nullable=False, foreign_key="exercise_types.id")
 
+    stats: list["UserStats"] = Relationship(back_populates="exercise", sa_relationship_kwargs={"lazy": "raise"})
     exercise_type: ExerciseType = Relationship(back_populates="exercises", sa_relationship_kwargs={"lazy": "selectin"})
-    exercise_logs: list[ExerciseLogs] = Relationship(back_populates="exercise", sa_relationship_kwargs={"lazy": "selectin"})
+    exercise_logs: list["ExerciseLogs"] = Relationship(back_populates="exercise", sa_relationship_kwargs={"lazy": "selectin"})
 
 class ProcessExercise(SQLModel, table=True):
     __tablename__ = "task_queue"

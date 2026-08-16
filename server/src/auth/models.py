@@ -1,10 +1,12 @@
-from datetime import datetime
-
 from datetime import datetime, UTC
+from typing import TYPE_CHECKING
+
 from sqlalchemy import DateTime
 from sqlmodel import SQLModel, Field, Relationship
 
-from src.logs.models import ExerciseLogs
+if TYPE_CHECKING:
+    from src.logs.models import ExerciseLogs
+    from src.stats.models import UserStats
 
 class UserType(SQLModel, table=True):
     __tablename__ = "users_type"
@@ -20,12 +22,17 @@ class User(SQLModel, table=True):
     username: str = Field(unique=True, index=True, nullable=False)
     email: str = Field(unique=True, index=True, nullable=False)
     password_hash: str = Field(nullable=False)
+    joined_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_type=DateTime(timezone=True),
+        nullable=False
+    )
 
     user_type_id: int = Field(nullable=False, default=2, foreign_key="users_type.id")
     # in the near future i will change this to lazy loading now it is eager loading
     type: UserType = Relationship(back_populates="users", sa_relationship_kwargs={"lazy": "selectin"})
     stats: "UserStats" = Relationship(back_populates="user",sa_relationship_kwargs={"lazy": "selectin", "uselist": False} )
-    logs: list[ExerciseLogs] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "raise"})
+    logs: list["ExerciseLogs"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "selectin"})
     # for testing purposes refresh tokens will be one to many, later i will think about making it one to one
     refresh_tokens: list["RefreshToken"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "selectin"})
 
