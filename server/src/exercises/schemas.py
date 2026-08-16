@@ -11,9 +11,11 @@ class ExerciseCreate(BaseModel):
     exercise_name: str
     type: int
 
-class ExerciseInfo(BaseModel):
+class ExerciseBase(BaseModel):
     id: int
     exercise_name: str
+
+class ExerciseInfo(ExerciseBase):
     difficulty: DifficultyEnum
     rating: int
     exercise_type: ExerciseTypeInfo
