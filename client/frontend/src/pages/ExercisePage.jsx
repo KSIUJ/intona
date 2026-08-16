@@ -3,10 +3,6 @@ import {useEffect} from "react";
 
 const ExercisePage = () => {
   const { id, exerciseSlug } = useParams();
-  useEffect(() => {
-      console.log(id)
-      console.log(exerciseSlug)
-  })
   return (
     <main>
       <h1>Exercise page</h1>

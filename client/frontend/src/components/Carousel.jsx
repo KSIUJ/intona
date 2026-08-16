@@ -76,11 +76,11 @@ export const ExerciseCard = ({ id, title, slug, difficulty, rating, linkBase }) 
 const Carousel = ({isSong, title}) => {
     const fetchExercises = async (isSong) => {
         const category = isSong ? "Song" : "Exercise"
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/exercises/list/${category}`)
-        if (!response.ok) {
+        const api_response = await fetch(`${import.meta.env.VITE_API_URL}/api/exercises/list/${category}`)
+        if (!api_response.ok) {
             throw new Error("Error from loading category")
         }
-        const response_json = await response.json()
+        const response_json = await api_response.json()
         return response_json
     }
 
