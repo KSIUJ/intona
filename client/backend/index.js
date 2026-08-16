@@ -35,10 +35,7 @@ app.post("/api/auth/token", upload.none(), async (req, res) => {
         });
 
         if (!token_response.ok) {
-            const apiError = new Error(`Błąd z zewnętrznego API: ${token_response.status}`);
-            apiError.status = token_response.status;
-
-            throw apiError;
+            return res.sendStatus(token_response.status).send(token_response.statusText)
         }
 
         const token_json = await token_response.json();
@@ -75,17 +72,14 @@ app.post("/api/auth/token", upload.none(), async (req, res) => {
 app.post("/api/auth/logout", upload.none(), async (req, res) => {
     try {
         const formData = new FormData();
-        formData.append("refresh_token", req.cookies?.refresh_token);
+        formData.append("refresh_token", req.cookies.refresh_token ? req.cookies.refresh_token : "NONE" );
         const token_response = await fetch(`${process.env.API_URL}/api/auth/logout`, {
             method: "POST",
             body: formData,
         });
 
         if (!token_response.ok) {
-            const apiError = new Error(`Błąd z zewnętrznego API: ${token_response.status}`);
-            apiError.status = token_response.status;
-
-            throw apiError;
+            return res.sendStatus(token_response.status).send("test")
         }
 
         res.cookie('access_token', "", {
@@ -108,11 +102,7 @@ app.post("/api/auth/logout", upload.none(), async (req, res) => {
     } catch (error) {
         console.error("Krytyczny błąd logowania:", error.message);
 
-        if (error.status === undefined) {
-            error.status = 500;
-        }
-
-        return res.status(error.status).send({ error: error.message });
+        return res.status(error.status).send({error: error.message});
     }
 })
 app.all('/*api/', upload.none(), async (req, res, next) => {
@@ -120,7 +110,7 @@ app.all('/*api/', upload.none(), async (req, res, next) => {
         let token = req.cookies?.access_token;
         let refresh_token = req.cookies?.refresh_token;
 
-        if (!token || jwtDecode(token).exp < Date.now()) {
+        if (refresh_token && (!token || jwtDecode(token).exp < Date.now())) {
             const formData = new FormData();
             formData.append("refresh_token", refresh_token)
             const refresh_response = await fetch(`${process.env.API_URL}/api/auth/refresh`, {
@@ -143,8 +133,22 @@ app.all('/*api/', upload.none(), async (req, res, next) => {
         }
         next()
     } catch (error) {
-        console.log(error.statusText)
+        throw error
+    }
+
+})
+
+app.get("/api/user/stats", async (req, res, next) => {
+    try {
+        if (!req.cookies.access_token) {
+            res.sendStatus(401).send('Unauthorized access')
+        }
+        const id = jwtDecode(req.cookies.access_token).sub
+
+        req.url = `/api/users/${id}/stats`;
         next();
+    } catch (error) {
+        next(error)
     }
 
 })

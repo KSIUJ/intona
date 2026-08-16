@@ -1,9 +1,11 @@
+import datetime
 import json
 import logging
 from fastapi import APIRouter, HTTPException, Form
 from sqlmodel import select
 
-from src.exercises.enums import ExerciseTypeEnum
+from src.logs.models import ExerciseLogs
+from src.exercises.enums import ExerciseTypeEnum, DifficultyEnum
 from src.auth.dependencies import CurrentUser
 from src.config import settings
 from src.database import SessionDep
@@ -11,6 +13,9 @@ from src.exercises.models import Exercise, ExerciseType
 from src.exercises.schemas import ExerciseInfo
 from src.exercises.utils import request_access, register_exercise, check_exercise_availability
 from src.services.s3_bucket import bucket_client
+from src.stats.models import UserStats
+from src.stats.utils import actualize_user_streak, update_favorite_exercise
+from src.vocal_analysis.utils import add_exercise_result
 
 router = APIRouter()
 
@@ -21,7 +26,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 @router.get("", response_model=list[ExerciseInfo])
-async def get_exercises(session: SessionDep):
+async def get_exercises(db: SessionDep):
     """
     Returns a list of all available exercises
 
@@ -39,19 +44,19 @@ async def get_exercises(session: SessionDep):
     * **exercise_name:** `str` -> name of exercise
     * **exercise_type:** `str` -> string representation of type, current members are mentioned above
     """
-    exercises = await session.exec(select(Exercise))
+    exercises = await db.exec(select(Exercise))
     return exercises.all()
 
 # for now it should be Songs/Exercise
 @router.get("/list/{exercise_type}")
-async def get_exercises_by_category(session: SessionDep, exercise_type: ExerciseTypeEnum ):
-    exercises_by_type = await session.exec(select(Exercise).join(ExerciseType).where(ExerciseType.type == exercise_type))
+async def get_exercises_by_category(db: SessionDep, exercise_type: ExerciseTypeEnum ):
+    exercises_by_type = await db.exec(select(Exercise).join(ExerciseType).where(ExerciseType.type == exercise_type))
     return exercises_by_type.all()
 
 
 # some day i will check exact error type, but for now Exception type will be enough
 @router.get("/available/{exercise_name}")
-async def check_availability(session: SessionDep, user: CurrentUser, exercise_name: str):
+async def check_availability(db: SessionDep, user: CurrentUser, exercise_name: str):
     """
     Checks whether there is a duplicate of this exercise
 
@@ -63,11 +68,11 @@ async def check_availability(session: SessionDep, user: CurrentUser, exercise_na
     * **HTTP STATUS 409:** Conflict if there is a duplicate exercise
     * **HTTP STATUS 200:** If you can send exercise to processing
     """
-    await check_exercise_availability(session, exercise_name)
+    await check_exercise_availability(db, exercise_name)
 
 
 @router.get("/request-access")
-async def request_exercise_access(session: SessionDep):
+async def request_exercise_access():
     """
     Returns a presigned post (an URL that can enable upload of chosen file)
 
@@ -94,9 +99,8 @@ async def request_exercise_access(session: SessionDep):
     presigned_post = await request_access()
     return presigned_post
 
-
 @router.get("/{exercise_id}", response_model=ExerciseInfo)
-async def get_exercise(session: SessionDep, exercise_id: int):
+async def get_exercise(db: SessionDep, exercise_id: int):
     """
     Returns specified exercise by **{exercise_id}** as **ExerciseInfo** object
 
@@ -107,13 +111,13 @@ async def get_exercise(session: SessionDep, exercise_id: int):
 
     *Returns* **ExerciseInfo** object encoded as JSON
     """
-    exercise = await session.exec(select(Exercise).where(Exercise.id == exercise_id))
+    exercise = await db.exec(select(Exercise).where(Exercise.id == exercise_id))
     return exercise.first()
 
 
 # i have doubts about this exercise name, maybe it should change?
 @router.get("/{exercise_id}/start")
-async def start_exercise(exercise_id: int, user: CurrentUser, session: SessionDep):
+async def start_exercise(exercise_id: int, user: CurrentUser, db: SessionDep):
     """
     Returns presigned url consisting of get_object method which is needed for getting file from bucket
 
@@ -131,7 +135,7 @@ async def start_exercise(exercise_id: int, user: CurrentUser, session: SessionDe
     * **HTTP STATUS 404:** if the exercise does not exist
     * **HTTP STATUS 409:** if the exercise exists and is not processed
     """
-    exercise = await session.exec(select(Exercise).where(Exercise.id == exercise_id))
+    exercise = await db.exec(select(Exercise).where(Exercise.id == exercise_id))
     exercise = exercise.first()
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")
@@ -149,8 +153,7 @@ async def start_exercise(exercise_id: int, user: CurrentUser, session: SessionDe
 
 
 @router.post("/schedule-processing")
-async def schedule_processing(session: SessionDep, exercise_name: str = Form(), file_path: str = Form(),
-                              exercise_type: int = Form()):
+async def schedule_processing(db: SessionDep, exercise_name: str = Form(), slug: str = Form(), difficulty: DifficultyEnum = Form(), rating: int = Form(), exercise_type: int = Form(), file_path: str = Form(),):
     """
     Creates Exercise placeholder with processed flag est to false, and creates entry within taskqueue table so our worker can notice its existence
 
@@ -167,4 +170,19 @@ async def schedule_processing(session: SessionDep, exercise_name: str = Form(), 
     * **HTTP STATUS 500** -> Problem with database connection
     * **HTTP STATUS 200** -> When there is no problem
     """
-    await register_exercise(session, exercise_name, file_path, exercise_type)
+    await register_exercise(db, exercise_name, slug, difficulty, rating, exercise_type, file_path)
+
+@router.post("/{exercise_id}/end")
+async def end_exercise(user: CurrentUser, db: SessionDep, exercise_id: int, exercise_duration: int = Form(), time_in_tune: float = Form(), average_deviation: float = Form(), attempted_at: datetime.datetime = Form(), attempting_user_id: int = Form()):
+    exercise_log = ExerciseLogs(exercise_id=exercise_id, exercise_duration=exercise_duration,time_in_tune=time_in_tune,average_deviation=average_deviation,attempted_at=attempted_at,attempting_user_id=attempting_user_id)
+    user_stats = await db.exec(select(UserStats).where(UserStats.id == attempting_user_id))
+    user_stats = user_stats.one()
+
+    db.add(exercise_log)
+    await db.flush()
+    await db.refresh(exercise_log)
+
+    await add_exercise_result(attempting_user_id, exercise_log)
+    await actualize_user_streak(user_stats, db)
+    await update_favorite_exercise(user_stats, exercise_id, db)
+
