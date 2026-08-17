@@ -15,7 +15,7 @@ async def check_user_stats(user_id: int, session: SessionDep) -> UserStats:
         raise HTTPException(status_code=404, detail="User not found")
     # maybe i should commit this change to a database
     if (datetime.now(UTC).date() - user_stats.last_activity_date.date()).days > 1:
-        user_stats.currentStreak = 0
+        user_stats.current_streak = 0
     return user_stats
 
 

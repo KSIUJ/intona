@@ -1,5 +1,5 @@
 import "./Dashboard.css";
-import {Link} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import {useQuery} from "@tanstack/react-query";
 
 
@@ -143,14 +143,15 @@ function AchievementIcon() {
 }
 
 function Dashboard() {
-
+    const navigate = useNavigate()
     const fetchUserStats = async () => {
         const api_response = await fetch(`/api/user/stats`, {
             credentials: 'include'
         })
 
         if (!api_response.ok) {
-            throw new Error(`${api_response.statusText}`)
+            console.log(`${api_response.status} ${api_response.statusText}`)
+            navigate("/")
         }
 
         const api_response_json = await api_response.json()
@@ -191,7 +192,7 @@ function Dashboard() {
         ${seconds !== 0 ? seconds : ""}${seconds !== 0 ? " seconds" : ""}`
 
         api_response_json.user.joined_at = new Date(api_response_json.user.joined_at).toLocaleDateString()
-        api_response_json.active_days_percentage = active_days_percentage
+        api_response_json.active_days_percentage = active_days_percentage.toFixed(2)
 
 
 
@@ -293,7 +294,7 @@ function Dashboard() {
                             <CalendarIcon/>
                         </div>
 
-                        <strong>{stats.current_streak}</strong>
+                        <strong>{stats.days_active}</strong>
                         <span>days active</span>
                     </article>
                 </section>
@@ -302,7 +303,7 @@ function Dashboard() {
                     <article className="progress-item">
                         <div className="progress-circle progress-40">
                             <div className="progress-circle-inner">
-                                <strong>{stats.mastered_percentage}%</strong>
+                                <strong>{stats.mastered_percentage.toFixed(2)}%</strong>
                             </div>
                         </div>
 
@@ -312,7 +313,7 @@ function Dashboard() {
                     <article className="progress-item">
                         <div className="progress-circle progress-70">
                             <div className="progress-circle-inner">
-                                <strong>{stats.average_score}%</strong>
+                                <strong>{stats.average_score.toFixed(2)}%</strong>
                             </div>
                         </div>
 

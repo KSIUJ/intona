@@ -137,7 +137,7 @@ async def schedule_processing(db: SessionDep, exercise_name: str = Form(), slug:
     await register_exercise(db, exercise_name, slug, difficulty, rating, exercise_type, file_path)
 
 # i have doubts about this exercise name, maybe it should change?
-@router.get("/{exercise_id}/start")
+@router.post("/{exercise_id}/start")
 async def start_exercise(exercise_id: int, user: CurrentUser, db: SessionDep):
     """
     Returns presigned url consisting of get_object method which is needed for getting file from bucket
