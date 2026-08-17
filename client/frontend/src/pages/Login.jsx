@@ -1,6 +1,11 @@
 import { Link } from "react-router-dom";
+import {useNavigate} from "react-router-dom";
+import {useQuery} from "@tanstack/react-query";
+import {useEffect} from "react";
 
 const Login = () => {
+  const navigate = useNavigate()
+
   const getToken = async (formData) => {
         try {
             const response = await fetch("/api/auth/token", {
@@ -11,18 +16,46 @@ const Login = () => {
             if (!response.ok) {
                 throw new Error(`Błąd logowania: ${response.status}`);
             }
+            navigate("/dashboard")
 
         } catch (error) {
             console.error("Wystąpił błąd:", error.message);
         }
     }
+
+    const checkIfLoggedIn = async () => {
+      try {
+        const api_response = await fetch("/api/auth/me", {
+          credentials: 'include'
+        })
+
+        // for testing purposes only
+        if (!api_response.ok) {
+          const api_response_error = new Error(`${api_response.statusText}`)
+          api_response_error.status = api_response.status
+          return api_response_error;
+        }
+
+        navigate("/dashboard")
+      } catch (error) {
+        console.log(`${error.status} ${error.statusText}`)
+        throw error;
+      }
+    }
+
+ const {isLoading} = useQuery({queryKey: ["check"], queryFn: checkIfLoggedIn})
+
+  if (isLoading) {
+    return <>LOADING</>
+  }
+
   return (
   <div className="app">
     <header className="site-header">
-      <a className="brand" href="#home">
+      <Link to={"/home"} className="brand">
         <span className="brand-icon"></span>
         <span>INTONA</span>
-      </a>
+      </Link>
 
       <nav className="main-nav">
         <Link to="/home"> Home</Link>

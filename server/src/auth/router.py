@@ -212,7 +212,6 @@ async def refresh_access_token(db: SessionDep, refresh_token: str = Form()):
         )
 
     user_id = refresh_token.split("-")[0]
-    logging.info(user_id)
 
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token_payload = create_access_token(

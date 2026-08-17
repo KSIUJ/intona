@@ -74,9 +74,10 @@ export const ExerciseCard = ({ id, title, slug, difficulty, rating, linkBase }) 
 
 
 const Carousel = ({isSong, title}) => {
+
     const fetchExercises = async (isSong) => {
         const category = isSong ? "Song" : "Exercise"
-        const api_response = await fetch(`${import.meta.env.VITE_API_URL}/api/exercises/list/${category}`)
+        const api_response = await fetch(`/api/exercises/list/${category}`)
         if (!api_response.ok) {
             throw new Error("Error from loading category")
         }
@@ -85,8 +86,11 @@ const Carousel = ({isSong, title}) => {
     }
 
 
-
-    const {data: rows, error, isLoading, isError} = useQuery({queryKey: ["isSong", isSong], queryFn: () => fetchExercises(isSong)})
+    const {data: rows, error, isLoading, isError} = useQuery({
+        queryKey: ["isSong", isSong],
+        queryFn: () => fetchExercises(isSong),
+        staleTime: Infinity
+    })
     const carouselRef = useRef(null);
     const scrollByAmount = (direction) => {
       if(!carouselRef.current) return;

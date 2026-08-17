@@ -248,13 +248,16 @@ function Dashboard() {
             <main className="dashboard-main">
                 <header className="dashboard-topbar">
                     <div className="dashboard-title">
-                        <button
-                            className="back-button"
-                            type="button"
-                            aria-label="Go back"
-                        >
-                            ←
-                        </button>
+                        <Link to={"/home"}>
+                            <button
+                                className="back-button"
+                                type="button"
+                                aria-label="Go back"
+                            >
+                                ←
+                            </button>
+                        </Link>
+
 
                         <h1>Dashboard</h1>
                     </div>
@@ -328,15 +331,16 @@ function Dashboard() {
                 </section>
 
                 <section className="summary-section">
-                    <article className="summary-card">
-                        <div className="summary-icon">
-                            <MusicIcon/>
-                        </div>
+                    {stats.exercise &&
+                        <article className="summary-card">
+                            <div className="summary-icon">
+                                <MusicIcon/>
+                            </div>
 
-                        <strong>{stats.exercise.exercise_name}</strong>
-                        <span>Favourite exercise</span>
-                    </article>
-
+                            <strong>{stats.exercise?.exercise_name}</strong>
+                            <span>Favourite exercise</span>
+                        </article>
+                    }
                     <article className="summary-card">
                         <div className="summary-icon">
                             <ClockIcon/>

@@ -29,8 +29,10 @@ class Exercise(SQLModel, table=True):
             type_= SQLModelEnum(DifficultyEnum, values_callable=enum_values, name="difficulty"),
 
         ))
+    exercise_duration: int = Field(nullable=False, default=0)
     rating: int = Field(nullable=False, default=0)
     type: int = Field(nullable=False, foreign_key="exercise_types.id")
+
 
     stats: list["UserStats"] = Relationship(back_populates="exercise", sa_relationship_kwargs={"lazy": "raise"})
     exercise_type: ExerciseType = Relationship(back_populates="exercises", sa_relationship_kwargs={"lazy": "selectin"})
