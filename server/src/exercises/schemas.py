@@ -20,6 +20,9 @@ class ExerciseInfo(ExerciseBase):
     rating: int
     exercise_type: ExerciseTypeInfo
 
-
+class ExerciseResult(BaseModel):
+    exercise_duration: float
+    time_in_tune: float
+    average_deviation: float
 
 

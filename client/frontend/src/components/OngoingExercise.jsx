@@ -1,29 +1,71 @@
 import {useEffect} from "react";
-import {useParams} from "react-router-dom";
-import {useQuery} from "@tanstack/react-query";
+import {useNavigate, useLocation} from "react-router-dom";
+import {useMutation} from "@tanstack/react-query";
 
 import useAudio from '../hooks/useAudio'
 
 
-const fetchURL = async (id) => {
-
-    const response = await fetch(`/api/exercises/${id}/start`, {
-        credentials: 'include'
-    });
-    if (!response.ok) throw new Error('Failed to fetch presigned url');
-    return response.json();
-}
-
 export default function OngoingExercise() {
-    const params = useParams();
+    const navigate = useNavigate();
+    const location_data = useLocation()
+    const {state} = location_data
+    const audio = useAudio(state.presigned_url)
 
-    const {data, isError, isLoading} = useQuery({
-        queryKey: ["exercises", params.id],
-        queryFn: () => fetchURL(params.id),
-        staleTime: 1000 * 60 * 5,
+    const {mutate} = useMutation({
+        mutationFn: (data) => communicateExerciseEnd(data.log_id, data.exercise_duration, data.time_in_tune, data.average_deviation),
+        onSuccess() {
+            console.log("successfully ended exercise")
+            navigate("/home")
+        },
+        onError(error) {
+            console.log("UNsuccessfully ended exercise")
+            console.log(error)
+            navigate("/home")
+        }
     })
 
-    const audio = useAudio(data?.presigned_url)
+    const communicateExerciseEnd = async (log_id, exercise_duration, time_in_tune, average_deviation) => {
+        try {
+            const api_response = await fetch(`/api/exercises/${log_id}/end`, {
+                method: "POST",
+                credentials: 'include',
+                headers: {
+                    "content-type": "application/json",
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    exercise_duration: exercise_duration,
+                    time_in_tune: time_in_tune,
+                    average_deviation: average_deviation
+                })
+            })
+
+            if (!api_response.ok) {
+                const api_error = new Error(`${api_response.statusText}`)
+                api_error.status = api_response.status
+                throw api_error
+            }
+
+            const api_response_json = await api_response.json()
+            return api_response_json
+        } catch (error) {
+            throw error
+        }
+    }
+
+
+    const imitateEndOfExercise = () => {
+        const random_exercise_duration = Math.random() * (Math.random() * 200)
+        const random_time_in_tune = Math.random() * 100
+        const random_average_deviation = Math.random() * 100
+        mutate({
+            log_id: state.log_id,
+            exercise_duration: random_exercise_duration,
+            time_in_tune: random_time_in_tune,
+            average_deviation: random_average_deviation
+        })
+    }
+
 
     useEffect(() => {
         const handleKeyDownEvent = (event) => {
@@ -47,13 +89,8 @@ export default function OngoingExercise() {
     }, [audio])
 
 
-    if (isLoading) {
-        return "Loading"
-    }
-    if (isError) {
-        return "Error"
-    }
-
-    return (<></>)
+    return (<>
+        <button onClick={imitateEndOfExercise}>Zakoncz zadanie (testowe)</button>
+    </>)
 
 }

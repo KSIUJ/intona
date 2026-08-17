@@ -25,4 +25,4 @@ class UserStatsUserResponse(BaseModel):
     total_practice_time: int
     days_active: int
     last_activity_date: datetime
-    exercise: ExerciseBase
+    exercise: ExerciseBase | None

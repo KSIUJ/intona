@@ -1,17 +1,19 @@
-import datetime
 import json
 import logging
+from datetime import datetime, UTC
+
 from fastapi import APIRouter, HTTPException, Form
 from sqlmodel import select
 
-from src.logs.models import ExerciseLogs
-from src.exercises.enums import ExerciseTypeEnum, DifficultyEnum
+from src.exercises.schemas import ExerciseResult
 from src.auth.dependencies import CurrentUser
 from src.config import settings
 from src.database import SessionDep
+from src.exercises.enums import ExerciseTypeEnum, DifficultyEnum
 from src.exercises.models import Exercise, ExerciseType
 from src.exercises.schemas import ExerciseInfo
 from src.exercises.utils import request_access, register_exercise, check_exercise_availability
+from src.logs.models import ExerciseLogs
 from src.services.s3_bucket import bucket_client
 from src.stats.models import UserStats
 from src.stats.utils import actualize_user_streak, update_favorite_exercise
@@ -114,6 +116,25 @@ async def get_exercise(db: SessionDep, exercise_id: int):
     exercise = await db.exec(select(Exercise).where(Exercise.id == exercise_id))
     return exercise.first()
 
+@router.post("/schedule-processing")
+async def schedule_processing(db: SessionDep, exercise_name: str = Form(), slug: str = Form(), difficulty: DifficultyEnum = Form(), rating: int = Form(), exercise_type: int = Form(), file_path: str = Form(),):
+    """
+    Creates Exercise placeholder with processed flag est to false, and creates entry within taskqueue table so our worker can notice its existence
+
+    Data are to be given in form-data format
+
+    ### Parameters:
+    * **exercise_name** -> name of exercise
+    * **file_path** -> path to file, needed for task queue and for task queue only
+    * **exercise_type** -> type of exercise (members mentioned above)
+
+    ### Returns:
+    * **HTTP STATUS 409** -> Exercise with this name already exists
+    * **HTTP STATUS 422** -> Typed data is not valid
+    * **HTTP STATUS 500** -> Problem with database connection
+    * **HTTP STATUS 200** -> When there is no problem
+    """
+    await register_exercise(db, exercise_name, slug, difficulty, rating, exercise_type, file_path)
 
 # i have doubts about this exercise name, maybe it should change?
 @router.get("/{exercise_id}/start")
@@ -135,6 +156,7 @@ async def start_exercise(exercise_id: int, user: CurrentUser, db: SessionDep):
     * **HTTP STATUS 404:** if the exercise does not exist
     * **HTTP STATUS 409:** if the exercise exists and is not processed
     """
+
     exercise = await db.exec(select(Exercise).where(Exercise.id == exercise_id))
     exercise = exercise.first()
     if not exercise:
@@ -149,40 +171,37 @@ async def start_exercise(exercise_id: int, user: CurrentUser, db: SessionDep):
         Bucket=settings.bucket_name, Key=f"exercise/{exercise_id}/results.json")
     processed_data = json.loads(bytearray(processed_song_array["Body"].read()))
 
-    return {"presigned_url": presigned_url, "processed_data": processed_data}
+    exercise_log = ExerciseLogs(exercise_id=exercise.id, exercise_duration=exercise.exercise_duration, time_in_tune=0, average_deviation=0, attempted_at=datetime.now(UTC), attempting_user_id=user.id)
+    db.add(exercise_log)
+    await db.commit()
+    # i shoudn't have to refresh because asking python to get .xxx should
+    # refresh that variable
 
+    return {"presigned_url": presigned_url, "processed_data": processed_data, "log_id": exercise_log.id}
 
-@router.post("/schedule-processing")
-async def schedule_processing(db: SessionDep, exercise_name: str = Form(), slug: str = Form(), difficulty: DifficultyEnum = Form(), rating: int = Form(), exercise_type: int = Form(), file_path: str = Form(),):
-    """
-    Creates Exercise placeholder with processed flag est to false, and creates entry within taskqueue table so our worker can notice its existence
+# i won't use access token to authenticate user because refresh token and access token
+# can expire when someone is exercising
+@router.post("/{exercise_log_id}/end")
+async def end_exercise(db: SessionDep, exercise_log_id: str , exercise_result: ExerciseResult):
+    exercise_log_id = int(exercise_log_id)
+    exercise_log = await db.exec(select(ExerciseLogs).where(ExerciseLogs.id == exercise_log_id))
+    exercise_log = exercise_log.one()
 
-    Data are to be given in form-data format
+    attempting_user_id = exercise_log.attempting_user_id
 
-    ### Parameters:
-    * **exercise_name** -> name of exercise
-    * **file_path** -> path to file, needed for task queue and for task queue only
-    * **exercise_type** -> type of exercise (members mentioned above)
-
-    ### Returns:
-    * **HTTP STATUS 409** -> Exercise with this name already exists
-    * **HTTP STATUS 422** -> Typed data is not valid
-    * **HTTP STATUS 500** -> Problem with database connection
-    * **HTTP STATUS 200** -> When there is no problem
-    """
-    await register_exercise(db, exercise_name, slug, difficulty, rating, exercise_type, file_path)
-
-@router.post("/{exercise_id}/end")
-async def end_exercise(user: CurrentUser, db: SessionDep, exercise_id: int, exercise_duration: int = Form(), time_in_tune: float = Form(), average_deviation: float = Form(), attempted_at: datetime.datetime = Form(), attempting_user_id: int = Form()):
-    exercise_log = ExerciseLogs(exercise_id=exercise_id, exercise_duration=exercise_duration,time_in_tune=time_in_tune,average_deviation=average_deviation,attempted_at=attempted_at,attempting_user_id=attempting_user_id)
     user_stats = await db.exec(select(UserStats).where(UserStats.id == attempting_user_id))
     user_stats = user_stats.one()
+
+    exercise_log.exercise_duration = exercise_result.exercise_duration
+    exercise_log.time_in_tune = exercise_result.time_in_tune
+    exercise_log.average_deviation = exercise_result.average_deviation
 
     db.add(exercise_log)
     await db.flush()
     await db.refresh(exercise_log)
 
+
     await add_exercise_result(attempting_user_id, exercise_log)
     await actualize_user_streak(user_stats, db)
-    await update_favorite_exercise(user_stats, exercise_id, db)
+    await update_favorite_exercise(user_stats, exercise_log.exercise_id, db)
 
