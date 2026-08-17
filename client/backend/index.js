@@ -1,13 +1,16 @@
 import express from 'express'
 import multer from 'multer'
 import cookieParser from 'cookie-parser'
-import {createProxyMiddleware} from "http-proxy-middleware";
+import bodyParser from 'body-parser'
+import {createProxyMiddleware, fixRequestBody} from "http-proxy-middleware";
 import {jwtDecode} from "jwt-decode";
+
 
 const app = express();
 const upload = multer();
 
 app.use(cookieParser());
+app.use(bodyParser.json());
 
 const apiProxy = createProxyMiddleware({
     target: process.env.API_URL,
@@ -18,6 +21,10 @@ const apiProxy = createProxyMiddleware({
 
             if (token) {
                 proxyReq.setHeader('Authorization', `Bearer ${token}`);
+            }
+
+            if (req.body) {
+                fixRequestBody(proxyReq, req);
             }
         },
     }
@@ -109,8 +116,7 @@ app.all('/*api/', upload.none(), async (req, res, next) => {
     try {
         let token = req.cookies?.access_token;
         let refresh_token = req.cookies?.refresh_token;
-
-        if (refresh_token && (!token || jwtDecode(token).exp < Date.now())) {
+        if (refresh_token && (!token || (jwtDecode(token).exp * 1000) < Date.now())) {
             const formData = new FormData();
             formData.append("refresh_token", refresh_token)
             const refresh_response = await fetch(`${process.env.API_URL}/api/auth/refresh`, {
