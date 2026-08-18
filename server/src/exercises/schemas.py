@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+from src.logs.enums import EndingStatusEnum
 from src.exercises.enums import DifficultyEnum
 
 
@@ -24,5 +25,11 @@ class ExerciseResult(BaseModel):
     exercise_duration: float
     time_in_tune: float
     average_deviation: float
+    exercise_end_status: EndingStatusEnum
+
+class ExerciseDeleteInfo(BaseModel):
+    secret_exercise_token: str
+
+
 
 

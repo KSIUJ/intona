@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Column
 from sqlmodel import Field, Relationship, SQLModel, Enum as SQLModelEnum
 
-from src.exercises.enums import DifficultyEnum, enum_values
+from src.exercises.enums import DifficultyEnum
+from src.utils import enum_values
 
 
 if TYPE_CHECKING:
@@ -46,6 +47,13 @@ class ProcessExercise(SQLModel, table=True):
     exercise_id: int = Field(default=None)
     # when i have time and patience i can think about enums etc.
     status: str = Field(nullable=False, default=None)
+
+# i don't know how to name it, so i will name it that way
+class ExerciseAvailabilityLog(SQLModel, table=True):
+    __tablename__ = "active_exercises"
+    log_id: int = Field(default=None, primary_key=True)
+    secret_exercise_token: str = Field(nullable=False)
+
 
 
 

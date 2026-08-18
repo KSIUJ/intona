@@ -14,4 +14,8 @@ class ExerciseLogCreate(BaseModel):
 class ExerciseLogResponse(ExerciseLogCreate):
     id: int 
     attempted_at: datetime
-    attempting_user_id: int 
+    attempting_user_id: int
+
+class ExerciseAvailabilityLogInfo(BaseModel):
+    log_id: int
+    secret_exercise_token: str
