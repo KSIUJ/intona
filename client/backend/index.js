@@ -66,7 +66,7 @@ app.post("/api/auth/token", upload.none(), async (req, res) => {
 
         return res.status(200).send("successfully logged in");
     } catch (error) {
-        console.error("Krytyczny błąd logowania:", error.message);
+        console.error("Critical log in error:", error.message);
 
         if (error.status === undefined) {
             error.status = 500;
@@ -107,7 +107,7 @@ app.post("/api/auth/logout", upload.none(), async (req, res) => {
 
         return res.status(200).send("successfully logged out");
     } catch (error) {
-        console.error("Krytyczny błąd logowania:", error.message);
+        console.error("Critical error message:", error.message);
 
         return res.status(error.status).send({error: error.message});
     }
@@ -143,7 +143,7 @@ app.use('/api', upload.none(), async (req, res, next) => {
             })
 
             if (!refresh_response.ok) {
-                console.log(`Błąd z zewnętrznego API: ${refresh_response.status}`)
+                console.log(`External API Error: ${refresh_response.status}`)
             }
 
             const refresh_response_json = await refresh_response.json()
