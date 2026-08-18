@@ -127,19 +127,19 @@ export default function OngoingExercise() {
         })
     }
 
+    const handleKeyDownEvent = (event) => {
+        const key = event.code;
+        console.log(key)
+        if (key === "Space")
+            audio.Toggle()
+    }
+
+    const handleMouseWheelEvent = (event) => {
+        audio.ChangeVolume(event.wheelDeltaY)
+    }
+
 
     useEffect(() => {
-        const handleKeyDownEvent = (event) => {
-            const key = event.code;
-            console.log(key)
-            if (key === "Space")
-                audio.Toggle();
-        }
-
-        const handleMouseWheelEvent = (event) => {
-            audio.ChangeVolume(event.wheelDeltaY)
-        }
-
         audio.hasEndedEventEmitter.on("end", () => {
             handleEndOfExercise(state.log_id, state.exercise_access_token, audio.time, ENDING_STATUS.ENDED)
         })
@@ -148,10 +148,11 @@ export default function OngoingExercise() {
         window.addEventListener("wheel", handleMouseWheelEvent)
 
         return () => {
+            console.log("test")
             window.removeEventListener("keydown", handleKeyDownEvent)
             window.removeEventListener("wheel", handleMouseWheelEvent)
         }
-    }, [audio])
+    }, [])
 
 
     return (<>

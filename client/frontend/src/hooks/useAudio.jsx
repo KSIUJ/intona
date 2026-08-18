@@ -18,8 +18,7 @@ export default function useAudio(presigned_url) {
         }
         const handleEndEvent = () => {
             hasEndedEventEmitter.emit("end")
-
-            setPlaying(false);
+            clearInterval(intervalId.current)
         }
         audio.current = new Audio(presigned_url);
 
@@ -33,22 +32,24 @@ export default function useAudio(presigned_url) {
         }
     }, [presigned_url])
 
+    async function Start() {
+        await audio.current.play();
+        intervalId.current = setInterval(() => {
+            time.current += 10;
+            console.log(time.current)
+        }, 10)
+    }
+
+    function Stop() {
+        audio.current.pause();
+        clearInterval(intervalId.current)
+    }
+
     async function Toggle() {
         if (!presigned_url) {
             return;
         }
-        if (isPlaying) {
-            audio.current.pause();
-            clearInterval(intervalId.current)
-        } else {
-            await audio.current.play();
-            intervalId.current = setInterval(() => {
-                time.current += 10;
-                console.log(time.current)
-            }, 10)
-        }
-        setPlaying(!isPlaying);
-
+        setPlaying(prev => !prev);
     }
 
     function ChangeVolume(step) {
@@ -66,5 +67,17 @@ export default function useAudio(presigned_url) {
         console.log(audio.current.volume)
     }
 
-    return {hasEndedEventEmitter, Toggle, ChangeVolume, isPlaying, time};
+    useEffect(() => {
+        if (isPlaying) {
+            Stop()
+        } else {
+            Start()
+        }
+    }, [isPlaying]);
+
+    useEffect(() => {
+        setPlaying(prev => !prev);
+    }, []);
+
+    return {hasEndedEventEmitter, ChangeVolume, Toggle, isPlaying, time};
 }
