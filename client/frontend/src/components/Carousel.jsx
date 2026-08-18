@@ -35,13 +35,13 @@ const difficultyColors = {
 };
 
 
-export const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type}) => {
+const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type, clickable}) => {
 
     return (
         <Card className="carousel-card">
             <CardActionArea
-                component={Link}
-                to={`${linkBase}/${id}/${slug}?type=${type}`}
+                component={clickable ? Link : 'div'}
+                to={clickable ? `${linkBase}/${id}/${slug}?type=${type}` : ''}
                 sx={{height: '100%'}}
             >
                 <CardContent
@@ -105,10 +105,6 @@ const Carousel = ({type, title}) => {
     };
     const linkBase = "/exercises";
 
-    if (isLoading) {
-        // to change for better loading ui
-        return (<>Loading...</>)
-    }
     if (isError) {
         // to change for better error ui
         return <>error</>
@@ -123,6 +119,9 @@ const Carousel = ({type, title}) => {
                     ‹
                 </button>
                 <div className="full-width-carousel" ref={carouselRef}>
+                    {isLoading && <ExerciseCard
+                        clickable={false}
+                    />}
                     {rows?.map((row) => (
                         <ExerciseCard
                             key={row.id}
@@ -133,6 +132,7 @@ const Carousel = ({type, title}) => {
                             rating={`${row.rating}%`}
                             linkBase={linkBase}
                             type={type}
+                            clickable={true}
                         />
                     ))}
                 </div>

@@ -6,6 +6,7 @@ import Avatar from "@mui/material/Avatar";
 
 import {checkIfLoggedIn} from "../utils/utils.js";
 import Carousel from "../components/Carousel";
+import CarouselSkeleton from "../components/CarouselSkeleton.jsx";
 
 
 const Home = () => {
@@ -39,7 +40,7 @@ const Home = () => {
         queryFn: fetchExerciseTypes,
     })
 
-    const {isSuccess, isError} = useQuery({
+    const {isSuccess, isLoading, isError} = useQuery({
         queryKey: ["logged_check"],
         queryFn: checkIfLoggedIn,
         retry: false
@@ -49,7 +50,7 @@ const Home = () => {
         mutationFn: Logout,
         onSuccess() {
             console.log("successfully logged out")
-            queryClient.invalidateQueries({ queryKey: ["logged_check"] })
+            queryClient.invalidateQueries({queryKey: ["logged_check"]})
             navigate("/login")
         },
         onError() {
@@ -57,9 +58,6 @@ const Home = () => {
             navigate("/login")
         }
     })
-
-
-
 
 
     return (
@@ -101,7 +99,13 @@ const Home = () => {
             </header>
 
             <main>
-                {exercise_types?.map((exercise_type) => {
+                {isLoading && Array.from(Array(2)).map((_, index) => {
+                    return <section>
+                        <CarouselSkeleton/>
+                    </section>
+                })}
+
+                {!isLoading && exercise_types?.map((exercise_type) => {
                     return <section>
                         <Carousel type={exercise_type.type}/>
                     </section>

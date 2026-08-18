@@ -206,7 +206,7 @@ function Dashboard() {
     }
 
     if (isLoading) {
-        return <>LOADING</>
+        return <></>
     }
 
     return (
