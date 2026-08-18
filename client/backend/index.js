@@ -112,7 +112,25 @@ app.post("/api/auth/logout", upload.none(), async (req, res) => {
         return res.status(error.status).send({error: error.message});
     }
 })
-app.all('/*api/', upload.none(), async (req, res, next) => {
+
+app.use('/api/public', async (req, res) => {
+    const api_response = await fetch(`${process.env.API_URL}/api${req.url}`, {
+            method: req.method,
+            headers: req.headers,
+            body: req.body
+        }
+    )
+    if (!api_response.ok) {
+
+        const api_response_error = new Error(`${api_response.statusText}`)
+        api_response_error.status = api_response.status
+        throw api_response_error
+    }
+    const api_response_json = await api_response.json()
+    return res.send(api_response_json)
+})
+
+app.use('/api', upload.none(), async (req, res, next) => {
     try {
         let token = req.cookies?.access_token;
         let refresh_token = req.cookies?.refresh_token;
@@ -143,6 +161,7 @@ app.all('/*api/', upload.none(), async (req, res, next) => {
     }
 
 })
+
 
 app.get("/api/user/stats", async (req, res, next) => {
     try {

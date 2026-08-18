@@ -1,11 +1,25 @@
 import {Link} from "react-router-dom";
 import {useNavigate} from "react-router-dom";
-import {useQuery} from "@tanstack/react-query";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {checkIfLoggedIn} from "../utils/utils.js";
 import {useEffect} from "react";
 
 const Login = () => {
+
     const navigate = useNavigate()
+    const queryClient = useQueryClient()
+
+    const {isSuccess, isLoading} = useQuery({
+        queryKey: ["check"], queryFn: checkIfLoggedIn, retry: false
+    })
+
+    const {mutate} = useMutation({
+        mutationFn: (formData) => getToken(formData),
+        onSuccess() {
+            queryClient.invalidateQueries({ queryKey: ["logged_check"] })
+            navigate("/dashboard")
+        }
+    })
 
     const getToken = async (formData) => {
         try {
@@ -17,16 +31,19 @@ const Login = () => {
             if (!response.ok) {
                 throw new Error(`Błąd logowania: ${response.status}`);
             }
-            navigate("/dashboard")
 
         } catch (error) {
             console.error("Wystąpił błąd:", error.message);
         }
     }
 
-    const {isSuccess, isLoading} = useQuery({
-        queryKey: ["check"], queryFn: checkIfLoggedIn, retry: false
-    })
+
+
+
+    const handleSubmit = (event) => {
+        event.preventDefault()
+        mutate(new FormData(event.target))
+    }
 
     useEffect(() => {
         if (isSuccess) {
@@ -75,7 +92,7 @@ const Login = () => {
 
                     {/*later when everything is done i will change it to useMutation and mutate, but for now i don't exactly know
         what to do with formData and mutate*/}
-                    <form className="login-form" action={getToken}>
+                    <form className="login-form" onSubmit={handleSubmit}>
                         <div className="form-group">
                             <label htmlFor="email">Email</label>
 

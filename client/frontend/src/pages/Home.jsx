@@ -1,6 +1,6 @@
 import {useState} from "react";
 import {Link, useNavigate} from "react-router-dom";
-import {useMutation, useQuery} from "@tanstack/react-query";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 
 import Avatar from "@mui/material/Avatar";
 
@@ -10,10 +10,11 @@ import Carousel from "../components/Carousel";
 
 const Home = () => {
     const navigate = useNavigate()
+    const queryClient = useQueryClient()
     const [open, setOpen] = useState(false);
 
     const fetchExerciseTypes = async () => {
-        const api_response = await fetch(`${import.meta.env.VITE_API_URL}/api/exercises/types`)
+        const api_response = await fetch(`/api/public/exercises/types`)
         if (!api_response.ok) {
             console.log("Error from loading types")
             throw new Error("Error from loading types")
@@ -22,7 +23,6 @@ const Home = () => {
         console.log(response_json)
         return response_json
     }
-
 
     const Logout = async () => {
         const response = await fetch(`/api/auth/logout`, {
@@ -34,19 +34,6 @@ const Home = () => {
         }
     }
 
-    const {mutate} = useMutation({
-        mutationFn: Logout,
-        onSuccess() {
-            console.log("successfully logged out")
-            navigate("/login")
-        },
-        onError() {
-            console.log("there was an error in logging out")
-            navigate("/login")
-        }
-    })
-
-
     const {data: exercise_types} = useQuery({
         queryKey: ["exercises"],
         queryFn: fetchExerciseTypes,
@@ -57,6 +44,22 @@ const Home = () => {
         queryFn: checkIfLoggedIn,
         retry: false
     })
+
+    const {mutate} = useMutation({
+        mutationFn: Logout,
+        onSuccess() {
+            console.log("successfully logged out")
+            queryClient.invalidateQueries({ queryKey: ["logged_check"] })
+            navigate("/login")
+        },
+        onError() {
+            console.log("there was an error in logging out")
+            navigate("/login")
+        }
+    })
+
+
+
 
 
     return (
