@@ -67,7 +67,7 @@ async def create_user(user: UserCreate, db: SessionDep):
 
     user_stats = UserStats(id=new_user.id,
                            averageScore=0,
-                           averageScoreByCategory=[{"category": exercise.type, "score": 0} for exercise in exercise_types],
+                           averageScoreByCategory={exercise.type: 0 for exercise in exercise_types},
                            currentStreak=0,
                            longestStreak=0,
                            masteredPercentage=0,
