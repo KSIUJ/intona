@@ -164,8 +164,7 @@ function Dashboard() {
         let active_days_percentage;
         if (diffDays === 0) {
             active_days_percentage = 100
-        }
-        else {
+        } else {
             active_days_percentage = (api_response_json.days_active / diffDays) * 100
         }
 
@@ -176,8 +175,8 @@ function Dashboard() {
         total_seconds -= years * (60 * 60 * 24 * 30 * 365)
         let months = Math.floor(total_seconds / (60 * 60 * 24 * 30))
         total_seconds -= months * (60 * 60 * 24 * 30)
-        let days = Math.floor(total_seconds / (60 * 60 * 24 ))
-        total_seconds -= days * (60 * 60 * 24 )
+        let days = Math.floor(total_seconds / (60 * 60 * 24))
+        total_seconds -= days * (60 * 60 * 24)
         let hours = Math.floor(total_seconds / (60 * 60))
         total_seconds -= hours * (60 * 60)
         let minutes = Math.floor(total_seconds / (60))
@@ -195,13 +194,12 @@ function Dashboard() {
         api_response_json.active_days_percentage = active_days_percentage.toFixed(2)
 
 
-
         return api_response_json
 
     }
 
 
-    const {data: stats, error, isError, isLoading} = useQuery({queryKey: ["dashboard"], queryFn: fetchUserStats})
+    const {data: stats, isError, isLoading} = useQuery({queryKey: ["dashboard"], queryFn: fetchUserStats})
 
     if (isError) {
         return <>ERROR</>
@@ -223,7 +221,7 @@ function Dashboard() {
                 </button>
 
                 <nav className="sidebar-navigation">
-                    <Link className="sidebar-link" to="/home">
+                    <Link className="sidebar-link" to="/">
             <span className="sidebar-icon">
               <HomeIcon/>
             </span>
@@ -249,7 +247,7 @@ function Dashboard() {
             <main className="dashboard-main">
                 <header className="dashboard-topbar">
                     <div className="dashboard-title">
-                        <Link to={"/home"}>
+                        <Link to={"/"}>
                             <button
                                 className="back-button"
                                 type="button"
