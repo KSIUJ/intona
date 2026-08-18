@@ -4,28 +4,88 @@ import {useMutation} from "@tanstack/react-query";
 
 import useAudio from '../hooks/useAudio'
 
-
+const ENDING_STATUS = {
+    ONGOING: 'Ongoing',
+    STOPPED: 'Stopped',
+    ENDED: 'Ended'
+};
 export default function OngoingExercise() {
     const navigate = useNavigate();
     const location_data = useLocation()
     const {state} = location_data
     const audio = useAudio(state.presigned_url)
 
-    const {mutate} = useMutation({
-        mutationFn: (data) => communicateExerciseEnd(data.log_id, data.exercise_duration, data.time_in_tune, data.average_deviation),
-        onSuccess() {
-            console.log("successfully ended exercise")
-            navigate("/home")
+    const mutateDelete = useMutation({
+        mutationFn: (variables) => deleteExerciseAccess(variables.log_id, variables.exercise_access_token),
+        onSuccess(data, variables) {
+            console.log("You have access to actualizing exercise")
+            console.log(variables)
+            mutateEnd.mutate({
+                log_id: variables.log_id,
+                // from milliseconds to seconds
+                exercise_duration: variables.exercise_duration,
+                time_in_tune: variables.time_in_tune,
+                average_deviation: variables.average_deviation,
+                // should be Stopped(I think I will delete stopped later), Exited (Forcefully before exercise completion), Ended (Whole exercise)
+                exercise_end_status: variables.exercise_end_status
+            })
+            console.log("????")
         },
         onError(error) {
-            console.log("UNsuccessfully ended exercise")
+            console.log("Your access token was invalid or already used")
             console.log(error)
-            navigate("/home")
+            navigate("/")
         }
     })
 
-    const communicateExerciseEnd = async (log_id, exercise_duration, time_in_tune, average_deviation) => {
+
+    const mutateEnd = useMutation({
+        mutationFn: (variables) => communicateExerciseEnd(variables.log_id, variables.exercise_duration, variables.time_in_tune, variables.average_deviation, variables.exercise_end_status),
+        onSuccess() {
+            console.log("successfully ended exercise")
+            navigate("/")
+        },
+        onError(error) {
+            console.log("Unsuccessfully ended exercise")
+            console.log(error)
+            navigate("/")
+        }
+    })
+
+
+    const deleteExerciseAccess = async (log_id, exercise_access_token) => {
         try {
+            const api_response = await fetch(`/api/exercises/${log_id}/end`, {
+                method: "DELETE",
+                credentials: 'include',
+                headers: {
+                    "content-type": "application/json",
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    secret_exercise_token: exercise_access_token
+                })
+            })
+
+            if (!api_response.ok) {
+                const api_error = new Error(`${api_response.statusText}`)
+                api_error.status = api_response.status
+                throw api_error
+            }
+
+        } catch (error) {
+            throw error
+        }
+
+
+    }
+    const communicateExerciseEnd = async (log_id, exercise_duration, time_in_tune, average_deviation, exercise_end_status) => {
+        try {
+            console.log(log_id)
+            console.log(exercise_duration)
+            console.log(time_in_tune)
+            console.log(average_deviation)
+            console.log(exercise_end_status)
             const api_response = await fetch(`/api/exercises/${log_id}/end`, {
                 method: "POST",
                 credentials: 'include',
@@ -36,7 +96,8 @@ export default function OngoingExercise() {
                 body: JSON.stringify({
                     exercise_duration: exercise_duration,
                     time_in_tune: time_in_tune,
-                    average_deviation: average_deviation
+                    average_deviation: average_deviation,
+                    exercise_end_status: exercise_end_status
                 })
             })
 
@@ -54,15 +115,18 @@ export default function OngoingExercise() {
     }
 
 
-    const imitateEndOfExercise = () => {
-        const random_exercise_duration = Math.random() * (Math.random() * 200)
+    const handleEndOfExercise = (log_id, exercise_access_token, time, exercise_end_status) => {
         const random_time_in_tune = Math.random() * 100
         const random_average_deviation = Math.random() * 100
-        mutate({
-            log_id: state.log_id,
-            exercise_duration: random_exercise_duration,
+        mutateDelete.mutate({
+            log_id: log_id,
+            exercise_access_token: exercise_access_token,
+            // from milliseconds to seconds
+            exercise_duration: Math.round(time.current / 1000),
             time_in_tune: random_time_in_tune,
-            average_deviation: random_average_deviation
+            average_deviation: random_average_deviation,
+            // should be Stopped(I think i will delete stopped later), Exited (Forcefully before exercise completion), Ended (Whole exercise)
+            exercise_end_status: exercise_end_status
         })
     }
 
@@ -79,6 +143,10 @@ export default function OngoingExercise() {
             audio.ChangeVolume(event.wheelDeltaY)
         }
 
+        audio.hasEndedEventEmitter.on("end", () => {
+            handleEndOfExercise(state.log_id, state.exercise_access_token, audio.time, ENDING_STATUS.ENDED)
+        })
+
         window.addEventListener("keydown", handleKeyDownEvent)
         window.addEventListener("wheel", handleMouseWheelEvent)
 
@@ -90,7 +158,9 @@ export default function OngoingExercise() {
 
 
     return (<>
-        <button onClick={imitateEndOfExercise}>Zakoncz zadanie (testowe)</button>
+        <button
+            onClick={() => handleEndOfExercise(state.log_id, state.exercise_access_token, audio.time, ENDING_STATUS.STOPPED)}>Zakoncz
+        </button>
     </>)
 
 }

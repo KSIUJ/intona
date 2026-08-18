@@ -1,22 +1,30 @@
-import { useEffect, useState, useRef } from "react";
+import {useEffect, useState, useRef} from "react";
+import mitt from 'mitt'
 
 
 export default function useAudio(presigned_url) {
-    const [hasEnded, setEnded] = useState(false);
     const [isPlaying, setPlaying] = useState(false);
 
     const audio = useRef(null);
+    const intervalId = useRef(null)
+    const time = useRef(0)
+
+    const hasEndedEventEmitter = new mitt() // in this library constructor starts with lowercase
+
 
     useEffect(() => {
         if (!presigned_url) {
             return;
         }
         const handleEndEvent = () => {
-            setEnded(true);
+            hasEndedEventEmitter.emit("end")
+            audio.current.pause();
+            clearInterval(intervalId.current)
             setPlaying(false);
         }
         audio.current = new Audio(presigned_url);
 
+        audio.current.loop = false
         audio.current?.addEventListener("ended", handleEndEvent)
 
         return () => {
@@ -32,8 +40,13 @@ export default function useAudio(presigned_url) {
         }
         if (isPlaying) {
             audio.current.pause();
+            clearInterval(intervalId.current)
         } else {
             await audio.current.play();
+            intervalId.current = setInterval(() => {
+                time.current += 10;
+                console.log(time.current)
+            }, 10)
         }
         setPlaying(!isPlaying);
 
@@ -53,5 +66,6 @@ export default function useAudio(presigned_url) {
         }
         console.log(audio.current.volume)
     }
-    return { Toggle, ChangeVolume, isPlaying, hasEnded };
+
+    return {hasEndedEventEmitter, Toggle, ChangeVolume, isPlaying, time};
 }

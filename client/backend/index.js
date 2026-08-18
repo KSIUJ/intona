@@ -16,7 +16,7 @@ const apiProxy = createProxyMiddleware({
     target: process.env.API_URL,
     changeOrigin: true,
     on: {
-        proxyReq: async (proxyReq, req, res) => {
+        proxyReq: async (proxyReq, req) => {
             let token = req.cookies?.access_token;
 
             if (token) {
@@ -79,7 +79,7 @@ app.post("/api/auth/token", upload.none(), async (req, res) => {
 app.post("/api/auth/logout", upload.none(), async (req, res) => {
     try {
         const formData = new FormData();
-        formData.append("refresh_token", req.cookies.refresh_token ? req.cookies.refresh_token : "NONE" );
+        formData.append("refresh_token", req.cookies.refresh_token ? req.cookies.refresh_token : "NONE");
         const token_response = await fetch(`${process.env.API_URL}/api/auth/logout`, {
             method: "POST",
             body: formData,

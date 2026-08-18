@@ -1,11 +1,14 @@
 import json
 import logging
-from datetime import datetime, UTC
+import uuid
+from datetime import datetime, UTC, timedelta
 
-from fastapi import APIRouter, HTTPException, Form
-from sqlmodel import select
+from fastapi import APIRouter, HTTPException, Form, Body
+from sqlmodel import select, delete
 
-from src.exercises.schemas import ExerciseResult
+from src.exercises.models import ExerciseAvailabilityLog
+from src.logs.enums import EndingStatusEnum
+from src.exercises.schemas import ExerciseResult, ExerciseDeleteInfo, ExerciseTypeInfo
 from src.auth.dependencies import CurrentUser
 from src.config import settings
 from src.database import SessionDep
@@ -49,9 +52,16 @@ async def get_exercises(db: SessionDep):
     exercises = await db.exec(select(Exercise))
     return exercises.all()
 
+
+@router.get("/types", response_model=list[ExerciseTypeInfo])
+async def get_exercise_types(db: SessionDep):
+    result = await db.exec(select(ExerciseType))
+    result = result.all()
+    return result
+
 # for now it should be Songs/Exercise
 @router.get("/list/{exercise_type}")
-async def get_exercises_by_category(db: SessionDep, exercise_type: ExerciseTypeEnum ):
+async def get_exercises_by_category(db: SessionDep, exercise_type: ExerciseTypeEnum):
     exercises_by_type = await db.exec(select(Exercise).join(ExerciseType).where(ExerciseType.type == exercise_type))
     return exercises_by_type.all()
 
@@ -101,6 +111,7 @@ async def request_exercise_access():
     presigned_post = await request_access()
     return presigned_post
 
+
 @router.get("/{exercise_id}", response_model=ExerciseInfo)
 async def get_exercise(db: SessionDep, exercise_id: int):
     """
@@ -116,8 +127,11 @@ async def get_exercise(db: SessionDep, exercise_id: int):
     exercise = await db.exec(select(Exercise).where(Exercise.id == exercise_id))
     return exercise.first()
 
+
 @router.post("/schedule-processing")
-async def schedule_processing(db: SessionDep, exercise_name: str = Form(), slug: str = Form(), difficulty: DifficultyEnum = Form(), rating: int = Form(), exercise_type: int = Form(), file_path: str = Form(),):
+async def schedule_processing(db: SessionDep, exercise_name: str = Form(), slug: str = Form(),
+                              difficulty: DifficultyEnum = Form(), rating: int = Form(), exercise_type: int = Form(),
+                              file_path: str = Form(), ):
     """
     Creates Exercise placeholder with processed flag est to false, and creates entry within taskqueue table so our worker can notice its existence
 
@@ -135,6 +149,7 @@ async def schedule_processing(db: SessionDep, exercise_name: str = Form(), slug:
     * **HTTP STATUS 200** -> When there is no problem
     """
     await register_exercise(db, exercise_name, slug, difficulty, rating, exercise_type, file_path)
+
 
 # i have doubts about this exercise name, maybe it should change?
 @router.post("/{exercise_id}/start")
@@ -171,19 +186,34 @@ async def start_exercise(exercise_id: int, user: CurrentUser, db: SessionDep):
         Bucket=settings.bucket_name, Key=f"exercise/{exercise_id}/results.json")
     processed_data = json.loads(bytearray(processed_song_array["Body"].read()))
 
-    exercise_log = ExerciseLogs(exercise_id=exercise.id, exercise_duration=exercise.exercise_duration, time_in_tune=0, average_deviation=0, attempted_at=datetime.now(UTC), attempting_user_id=user.id)
-    db.add(exercise_log)
-    await db.commit()
-    # i shoudn't have to refresh because asking python to get .xxx should
-    # refresh that variable
+    exercise_log = ExerciseLogs(exercise_id=exercise.id, exercise_duration=exercise.exercise_duration, time_in_tune=0,
+                                average_deviation=0, attempted_at=datetime.now(UTC), ended_at=None,
+                                attempting_user_id=user.id,
+                                status=EndingStatusEnum.ONGOING)
 
-    return {"presigned_url": presigned_url, "processed_data": processed_data, "log_id": exercise_log.id}
+    db.add(exercise_log)
+    await db.flush()
+    await db.refresh(exercise_log)
+
+    secret_token = str(uuid.uuid4())
+    active_exercise = ExerciseAvailabilityLog(log_id=exercise_log.id,
+                                              secret_exercise_token=secret_token)
+
+    db.add(active_exercise)
+    await db.commit()
+
+    logging.info("no problem with starting exercise")
+
+    return {"presigned_url": presigned_url, "processed_data": processed_data, "log_id": exercise_log.id,
+            "exercise_access_token": secret_token}
+
 
 # i won't use access token to authenticate user because refresh token and access token
 # can expire when someone is exercising
 @router.post("/{exercise_log_id}/end")
-async def end_exercise(db: SessionDep, exercise_log_id: str , exercise_result: ExerciseResult):
+async def end_exercise(db: SessionDep, exercise_log_id: str, exercise_result: ExerciseResult):
     exercise_log_id = int(exercise_log_id)
+
     exercise_log = await db.exec(select(ExerciseLogs).where(ExerciseLogs.id == exercise_log_id))
     exercise_log = exercise_log.one()
 
@@ -197,11 +227,49 @@ async def end_exercise(db: SessionDep, exercise_log_id: str , exercise_result: E
     exercise_log.average_deviation = exercise_result.average_deviation
 
     db.add(exercise_log)
-    await db.flush()
-    await db.refresh(exercise_log)
+
+    logging.info(exercise_log)
+
+    user_stats.total_practice_time += exercise_result.exercise_duration
+
+    if exercise_result.exercise_end_status == EndingStatusEnum.ENDED:
+        exercise = await db.exec(select(Exercise).where(Exercise.id == exercise_log.exercise_id))
+        exercise = exercise.one()
+
+        expected_exercise_end = exercise_log.attempted_at + timedelta(seconds=exercise.exercise_duration)
+        # let's say i will allow a delay of 30 seconds, but maybe later i should check if there should be any delays
+        # if any of these is not true then there are some problems
+        # when we have time we can test more protection like: and abs(exercise.exercise_duration - exercise_log.exercise_duration) < 30 and expected_exercise_end < datetime.now(UTC)
+        if exercise is not None:
+            await add_exercise_result(db,attempting_user_id, exercise_log, user_stats)
+            await actualize_user_streak(user_stats, db)
+            await update_favorite_exercise(user_stats, exercise_log.exercise_id, db)
+            exercise_log.status = EndingStatusEnum.ENDED
+            logging.info("exercise ended properly and results should be included")
+        else:
+            logging.info("The exercise was not ended properly")
+            return HTTPException(status_code=409, detail="The exercise was not ended properly")
+    else:
+        exercise_log.status = EndingStatusEnum.STOPPED
+        db.add(user_stats)
+        logging.info("exercise ended properly and results should not be included (total_practice_time is an exception)")
+    await db.commit()
 
 
-    await add_exercise_result(attempting_user_id, exercise_log)
-    await actualize_user_streak(user_stats, db)
-    await update_favorite_exercise(user_stats, exercise_log.exercise_id, db)
+@router.delete("/{exercise_log_id}/end")
+async def remove_access_to_log(db: SessionDep, exercise_log_id: str, exercise_delete_info: ExerciseDeleteInfo):
+    exercise_log_id = int(exercise_log_id)
+
+    exercise_availability_log = await db.exec(select(ExerciseAvailabilityLog).where(ExerciseAvailabilityLog.log_id == exercise_log_id))
+    exercise_availability_log = exercise_availability_log.one()
+
+    if exercise_availability_log is not None and exercise_availability_log.secret_exercise_token == exercise_delete_info.secret_exercise_token:
+        statement = delete(ExerciseAvailabilityLog).where(ExerciseAvailabilityLog.log_id == exercise_log_id) # type: ignore
+        result = await db.execute(statement) # type: ignore
+        await db.commit()
+        if result.rowcount == 0: # type: ignore
+            raise HTTPException(status_code=409, detail="Exercise was already ended")
+    else:
+        raise HTTPException(status_code=409, detail="Exercise was already ended / stopped")
+
 
