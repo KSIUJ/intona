@@ -18,8 +18,7 @@ export default function useAudio(presigned_url) {
         }
         const handleEndEvent = () => {
             hasEndedEventEmitter.emit("end")
-            audio.current.pause();
-            clearInterval(intervalId.current)
+
             setPlaying(false);
         }
         audio.current = new Audio(presigned_url);

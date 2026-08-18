@@ -29,7 +29,6 @@ export default function OngoingExercise() {
                 // should be Stopped(I think I will delete stopped later), Exited (Forcefully before exercise completion), Ended (Whole exercise)
                 exercise_end_status: variables.exercise_end_status
             })
-            console.log("????")
         },
         onError(error) {
             console.log("Your access token was invalid or already used")
@@ -81,11 +80,6 @@ export default function OngoingExercise() {
     }
     const communicateExerciseEnd = async (log_id, exercise_duration, time_in_tune, average_deviation, exercise_end_status) => {
         try {
-            console.log(log_id)
-            console.log(exercise_duration)
-            console.log(time_in_tune)
-            console.log(average_deviation)
-            console.log(exercise_end_status)
             const api_response = await fetch(`/api/exercises/${log_id}/end`, {
                 method: "POST",
                 credentials: 'include',
@@ -116,6 +110,9 @@ export default function OngoingExercise() {
 
 
     const handleEndOfExercise = (log_id, exercise_access_token, time, exercise_end_status) => {
+        // this will delete timer
+        audio.Toggle()
+
         const random_time_in_tune = Math.random() * 100
         const random_average_deviation = Math.random() * 100
         mutateDelete.mutate({
