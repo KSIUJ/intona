@@ -3,9 +3,10 @@ import logging
 import uuid
 from datetime import datetime, UTC, timedelta
 
-from fastapi import APIRouter, HTTPException, Form, Body
+from fastapi import APIRouter, HTTPException, Form
 from sqlmodel import select, delete
 
+from src.exercises.schemas import TestingExerciseInfo
 from src.exercises.models import ExerciseAvailabilityLog
 from src.logs.enums import EndingStatusEnum
 from src.exercises.schemas import ExerciseResult, ExerciseDeleteInfo, ExerciseTypeInfo
@@ -52,12 +53,35 @@ async def get_exercises(db: SessionDep):
     exercises = await db.exec(select(Exercise))
     return exercises.all()
 
+# for testing purposes only, later it will be deleted and /{exericse_id}/start will do its job
+@router.get("/playing-test", response_model=TestingExerciseInfo)
+async def get_testing_files():
+    """
+    This is testing endpoint which only purpose is to return presigned_urls which you can use to download files into react and test if it can be used by tone_js and Midi library
+
+    *returns* **JSON encoded data** which consists of:
+    * **midi_presigned_url:** `str` -> presigned_url
+    * **xml_presigned_url:** `str` -> presigned_url
+    """
+    midi_file = bucket_client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": settings.bucket_name, "Key": f"midi-test/audio.midi"},
+        ExpiresIn=3600,
+    )
+    xml_file = bucket_client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": settings.bucket_name, "Key": f"midi-test/notes.musicxml"},
+        ExpiresIn=3600,
+    )
+    return {"midi_presigned_url": midi_file, "xml_presigned_url": xml_file}
+
 
 @router.get("/types", response_model=list[ExerciseTypeInfo])
 async def get_exercise_types(db: SessionDep):
     result = await db.exec(select(ExerciseType))
     result = result.all()
     return result
+
 
 # for now it should be Songs/Exercise
 @router.get("/list/{exercise_type}")
@@ -241,7 +265,7 @@ async def end_exercise(db: SessionDep, exercise_log_id: str, exercise_result: Ex
         # if any of these is not true then there are some problems
         # when we have time we can test more protection like: and abs(exercise.exercise_duration - exercise_log.exercise_duration) < 30 and expected_exercise_end < datetime.now(UTC)
         if exercise is not None:
-            await add_exercise_result(db,attempting_user_id, exercise_log, user_stats)
+            await add_exercise_result(db, attempting_user_id, exercise_log, user_stats)
             await actualize_user_streak(user_stats, db)
             await update_favorite_exercise(user_stats, exercise_log.exercise_id, db)
             exercise_log.status = EndingStatusEnum.ENDED
@@ -260,16 +284,16 @@ async def end_exercise(db: SessionDep, exercise_log_id: str, exercise_result: Ex
 async def remove_access_to_log(db: SessionDep, exercise_log_id: str, exercise_delete_info: ExerciseDeleteInfo):
     exercise_log_id = int(exercise_log_id)
 
-    exercise_availability_log = await db.exec(select(ExerciseAvailabilityLog).where(ExerciseAvailabilityLog.log_id == exercise_log_id))
+    exercise_availability_log = await db.exec(
+        select(ExerciseAvailabilityLog).where(ExerciseAvailabilityLog.log_id == exercise_log_id))
     exercise_availability_log = exercise_availability_log.one()
 
     if exercise_availability_log is not None and exercise_availability_log.secret_exercise_token == exercise_delete_info.secret_exercise_token:
-        statement = delete(ExerciseAvailabilityLog).where(ExerciseAvailabilityLog.log_id == exercise_log_id) # type: ignore
-        result = await db.execute(statement) # type: ignore
+        statement = delete(ExerciseAvailabilityLog).where(
+            ExerciseAvailabilityLog.log_id == exercise_log_id)  # type: ignore
+        result = await db.execute(statement)  # type: ignore
         await db.commit()
-        if result.rowcount == 0: # type: ignore
+        if result.rowcount == 0:  # type: ignore
             raise HTTPException(status_code=409, detail="Exercise was already ended")
     else:
         raise HTTPException(status_code=409, detail="Exercise was already ended / stopped")
-
-

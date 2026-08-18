@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl, Field
 
 from src.logs.enums import EndingStatusEnum
 from src.exercises.enums import DifficultyEnum
@@ -29,6 +29,12 @@ class ExerciseResult(BaseModel):
 
 class ExerciseDeleteInfo(BaseModel):
     secret_exercise_token: str
+
+class TestingExerciseInfo(BaseModel):
+    midi_file: HttpUrl = Field(description="MIDI file presigned_url",
+                               examples=["https://storage_url/bucket_name/midi-test/audio.midi?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=tid_bdSHUPdTNWnJZlsZZrQL_uEYqcZErtEs_PgXhRb_tbfNJlglbW%2F20260818%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260818T095051Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=72ddc63e360101062ce6fa892dd1abbab3942dacd4eadc47e7117ba6882974b7"])
+    xml_file: HttpUrl = Field(description="xml file presigned_url",
+                               examples=["https://t3.storageapi.dev/exercise-audio-files-8bolos/midi-test/notes.musicxml?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=tid_bdSHUPdTNWnJZlsZZrQL_uEYqcZErtEs_PgXhRb_tbfNJlglbW%2F20260818%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260818T095051Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=fe81ec8d6c621baa78305fced19fb7427fe1bd2a0312b204da340857612c6462"])
 
 
 
