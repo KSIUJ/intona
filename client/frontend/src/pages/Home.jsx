@@ -1,8 +1,11 @@
 import {useState} from "react";
 import {Link, useNavigate} from "react-router-dom";
-import Avatar from "@mui/material/Avatar";
-import Carousel from "../components/Carousel";
 import {useMutation, useQuery} from "@tanstack/react-query";
+
+import Avatar from "@mui/material/Avatar";
+
+import {checkIfLoggedIn} from "../utils/utils.js";
+import Carousel from "../components/Carousel";
 
 
 const Home = () => {
@@ -10,7 +13,7 @@ const Home = () => {
     const [open, setOpen] = useState(false);
 
     const fetchExerciseTypes = async () => {
-        const api_response = await fetch(`/api/exercises/types`)
+        const api_response = await fetch(`${import.meta.env.VITE_API_URL}/api/exercises/types`)
         if (!api_response.ok) {
             console.log("Error from loading types")
             throw new Error("Error from loading types")
@@ -19,6 +22,7 @@ const Home = () => {
         console.log(response_json)
         return response_json
     }
+
 
     const Logout = async () => {
         const response = await fetch(`/api/auth/logout`, {
@@ -42,10 +46,16 @@ const Home = () => {
         }
     })
 
+
     const {data: exercise_types} = useQuery({
         queryKey: ["exercises"],
         queryFn: fetchExerciseTypes,
-        staleTime: Infinity
+    })
+
+    const {isSuccess, isError} = useQuery({
+        queryKey: ["logged_check"],
+        queryFn: checkIfLoggedIn,
+        retry: false
     })
 
 
@@ -56,6 +66,7 @@ const Home = () => {
                     <span className="brand-icon"></span>
                     <span>INTONA</span>
                 </Link>
+
 
                 <div className="avatar-menu">
                     <button
@@ -68,12 +79,19 @@ const Home = () => {
 
                     {open && (
                         <div className="avatar-dropdown">
-                            <button type="button">
-                                <Link to="/dashboard">Dashboard</Link>
-                            </button>
-                            <button type="button" onClick={mutate}>
-                                Log out
-                            </button>
+                            {isSuccess &&
+                                <>
+                                    <button type="button">
+                                        <Link to="/dashboard">Dashboard</Link>
+                                    </button>
+
+                                    <button type="button" onClick={mutate}>
+                                        Sign out
+                                    </button>
+                                </>}
+                            {isError && <button type="button" onClick={() => navigate("/login")}>
+                                Sign in
+                            </button>}
                         </div>
                     )}
                 </div>

@@ -1,6 +1,8 @@
 import {Link} from "react-router-dom";
 import {useNavigate} from "react-router-dom";
 import {useQuery} from "@tanstack/react-query";
+import {checkIfLoggedIn} from "../utils/utils.js";
+import {useEffect} from "react";
 
 const Login = () => {
     const navigate = useNavigate()
@@ -22,28 +24,15 @@ const Login = () => {
         }
     }
 
-    const checkIfLoggedIn = async () => {
-        try {
-            const api_response = await fetch("/api/auth/me", {
-                credentials: 'include'
-            })
+    const {isSuccess, isLoading} = useQuery({
+        queryKey: ["check"], queryFn: checkIfLoggedIn, retry: false
+    })
 
-            // for testing purposes only
-            if (!api_response.ok) {
-                const api_response_error = new Error(`${api_response.statusText}`)
-                api_response_error.status = api_response.status
-                return api_response_error;
-            }
-
+    useEffect(() => {
+        if (isSuccess) {
             navigate("/dashboard")
-        } catch (error) {
-            console.log(`${error.status} ${error.statusText}`)
-            throw error;
         }
-    }
-
-    const {isLoading} = useQuery({queryKey: ["check"], queryFn: checkIfLoggedIn})
-
+    }, [isSuccess]);
 
     if (isLoading) {
         return <>LOADING</>
