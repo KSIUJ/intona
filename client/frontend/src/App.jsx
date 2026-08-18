@@ -5,7 +5,6 @@ import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import ExercisePage from "./pages/ExercisePage";
-import SongsPage from "./pages/SongsPage";
 import OngoingExercise from "./components/OngoingExercise.jsx";
 
 const queryClient = new QueryClient();
@@ -15,13 +14,12 @@ function App() {
         <QueryClientProvider client={queryClient}>
             <BrowserRouter>
                 <Routes>
-                    <Route path="/" element={<Login/>}/>
-                    <Route path="/home" element={<Home/>}/>
+                    <Route path="/" element={<Home/>}/>
+                    <Route path="/login" element={<Login/>}/>
                     <Route path="/dashboard" element={<Dashboard/>}/>
                     <Route path="/exercises" element={<ExercisePage/>}/>
-                    <Route path="/exercises/:id/:exerciseSlug" element={<ExercisePage/>}/>
-                    <Route path="/exercises/:id/:exerciseSlug/start" element={<OngoingExercise/>}/>
-                    <Route path="/songs/:id/:songsSlug" element={<SongsPage/>}/>
+                    <Route path="/exercises/:id/:exercise_slug" element={<ExercisePage/>}/>
+                    <Route path="/exercises/:id/:exercise_slug/start" element={<OngoingExercise/>}/>
                 </Routes>
             </BrowserRouter>
         </QueryClientProvider>
