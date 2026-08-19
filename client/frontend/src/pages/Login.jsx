@@ -10,7 +10,10 @@ const Login = () => {
     const queryClient = useQueryClient()
 
     const {isSuccess, isLoading} = useQuery({
-        queryKey: ["check"], queryFn: checkIfLoggedIn, retry: false
+        queryKey: ["check"], queryFn: checkIfLoggedIn, retry: false,
+        staleTime: 1000 * 60 * 60, // 1 hour in ms
+      cacheTime: 1000 * 60 * 60, // 1 hour in ms
+      refetchOnWindowFocus: false,
     })
 
     const {mutate} = useMutation({

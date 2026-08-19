@@ -36,8 +36,10 @@ const Home = () => {
     }
 
     const {data: exercise_types} = useQuery({
-        queryKey: ["exercises"],
+        queryKey: ["exercise_types"],
         queryFn: fetchExerciseTypes,
+        staleTime: Infinity,
+        refetchOnWindowFocus: false
     })
 
     const {isSuccess, isLoading, isError} = useQuery({

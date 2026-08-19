@@ -87,7 +87,8 @@ const Carousel = ({type, title}) => {
     const {data: rows, isLoading, isError} = useQuery({
         queryKey: ["type", type],
         queryFn: () => fetchExercises(type),
-        staleTime: Infinity
+        staleTime: Infinity,
+        refetchOnWindowFocus: false
     })
 
     const carouselRef = useRef(null);
