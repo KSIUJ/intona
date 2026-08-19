@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO)
 router = APIRouter()
 
 @router.post("/register", response_model=UserPrivate, status_code=status.HTTP_201_CREATED)
-async def create_user(user: Annotated[UserCreate, Form()], db: SessionDep):
+async def create_user(user: UserCreate, db: SessionDep):
     """
     Creates new user and detailed stats for this user
 

@@ -6,6 +6,7 @@ import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import ExercisePage from "./pages/ExercisePage";
 import OngoingExercise from "./components/OngoingExercise.jsx";
+import SignUp from "./pages/SignUp.jsx";
 
 const queryClient = new QueryClient();
 
@@ -16,6 +17,7 @@ function App() {
                 <Routes>
                     <Route path="/" element={<Home/>}/>
                     <Route path="/login" element={<Login/>}/>
+                    <Route path="/sign_up" element={<SignUp/>}/>
                     <Route path="/dashboard" element={<Dashboard/>}/>
                     <Route path="/exercises" element={<ExercisePage/>}/>
                     <Route path="/exercises/:id/:exercise_slug" element={<ExercisePage/>}/>

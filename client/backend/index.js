@@ -42,7 +42,12 @@ app.post("/api/auth/token", upload.none(), async (req, res) => {
         });
 
         if (!token_response.ok) {
-            return res.sendStatus(token_response.status).send(token_response.statusText)
+            const errorText = await token_response.text();
+            console.error("error message:", errorText);
+
+            const api_response_error = new Error(errorText);
+            api_response_error.status = token_response.status;
+            throw api_response_error;
         }
 
         const token_json = await token_response.json();
@@ -86,7 +91,12 @@ app.post("/api/auth/logout", upload.none(), async (req, res) => {
         });
 
         if (!token_response.ok) {
-            return res.sendStatus(token_response.status).send("test")
+            const errorText = await token_response.text();
+            console.error("error message:", errorText);
+
+            const api_response_error = new Error(errorText);
+            api_response_error.status = token_response.status;
+            throw api_response_error;
         }
 
         res.cookie('access_token', "", {
@@ -113,24 +123,34 @@ app.post("/api/auth/logout", upload.none(), async (req, res) => {
     }
 })
 
-app.use('/api/public', async (req, res) => {
-    const api_response = await fetch(`${process.env.API_URL}/api${req.url}`, {
+app.use("/api/public", upload.none(), async (req, res) => {
+    try {
+        console.log(`${process.env.API_URL}/api${req.url} ${req.method} ${JSON.stringify(req.body)}`)
+        const api_response = await fetch(`${process.env.API_URL}/api${req.url}`, {
             method: req.method,
-            headers: req.headers,
-            body: req.body
-        }
-    )
-    if (!api_response.ok) {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(req.body)
+        })
+        if (!api_response.ok) {
 
-        const api_response_error = new Error(`${api_response.statusText}`)
-        api_response_error.status = api_response.status
-        throw api_response_error
+            const errorText = await api_response.text();
+            console.error("error message:", errorText);
+
+            const api_response_error = new Error(errorText);
+            api_response_error.status = api_response.status;
+            throw api_response_error;
+        }
+        const api_response_json = await api_response.json()
+        return res.send(api_response_json)
+    } catch (e) {
+        return res.status(e.status || 500).json({body: e.message})
     }
-    const api_response_json = await api_response.json()
-    return res.send(api_response_json)
+
 })
 
-app.use('/api', upload.none(), async (req, res, next) => {
+app.use("/api", upload.none(), async (req, res, next) => {
     try {
         let token = req.cookies?.access_token;
         let refresh_token = req.cookies?.refresh_token;
@@ -143,7 +163,7 @@ app.use('/api', upload.none(), async (req, res, next) => {
             })
 
             if (!refresh_response.ok) {
-                console.log(`External API Error: ${refresh_response.status}`)
+                console.log(`External API error: ${refresh_response.status}`)
             }
 
             const refresh_response_json = await refresh_response.json()
@@ -157,7 +177,7 @@ app.use('/api', upload.none(), async (req, res, next) => {
         }
         next()
     } catch (error) {
-        throw error
+        return res.status(error.status || 500).json({body: error.message})
     }
 
 })

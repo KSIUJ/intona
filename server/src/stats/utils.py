@@ -3,6 +3,7 @@ from datetime import datetime, UTC
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, func
 
+from src.logs.enums import EndingStatusEnum
 from src.logs.models import ExerciseLogs
 from src.stats.models import UserStats
 
@@ -29,7 +30,7 @@ async def actualize_user_streak(user_stats: UserStats, db: AsyncSession) -> User
     return user_stats
 
 async def update_favorite_exercise(user_stats: UserStats, exercise_id: int, db: AsyncSession):
-    exercise_count = await db.exec(select(func.count(ExerciseLogs.id)).where(ExerciseLogs.attempting_user_id==user_stats.id).where(ExerciseLogs.exercise_id==exercise_id))
+    exercise_count = await db.exec(select(func.count(ExerciseLogs.id)).where(ExerciseLogs.attempting_user_id==user_stats.id).where(ExerciseLogs.exercise_id==exercise_id).where(ExerciseLogs.status == EndingStatusEnum.ENDED))
     exercise_count = exercise_count.all()
 
     if user_stats.favorite_exercise is None:

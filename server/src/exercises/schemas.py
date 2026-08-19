@@ -17,6 +17,7 @@ class ExerciseBase(BaseModel):
     exercise_name: str
 
 class ExerciseInfo(ExerciseBase):
+    slug: str
     difficulty: DifficultyEnum = Field("Exercise difficulty rating", examples=["Easy", "Medium", "Hard"])
     rating: int
     exercise_type: ExerciseTypeInfo = Field("Exercise type", examples=["Song", "Exercise"])
