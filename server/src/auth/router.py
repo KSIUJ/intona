@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO)
 router = APIRouter()
 
 @router.post("/register", response_model=UserPrivate, status_code=status.HTTP_201_CREATED)
-async def create_user(user: UserCreate, db: SessionDep):
+async def create_user(user: Annotated[UserCreate, Form()], db: SessionDep):
     """
     Creates new user and detailed stats for this user
 
@@ -28,9 +28,6 @@ async def create_user(user: UserCreate, db: SessionDep):
     * **username**: `str` -> name of user
     * **email**: `str` -> email of user
     * **password**: `str` -> password of user
-    * **user_type_id**: `int` -> id of user type, which has members mentioned below:
-        * admin: 1
-        * user: 2
 
     ### Returns:
     **UserPrivate** encoded in JSON, which has mentioned Fields
@@ -59,7 +56,8 @@ async def create_user(user: UserCreate, db: SessionDep):
         username=user.username,
         email=user.email.lower(),
         password_hash=hash_password(user.password),
-        user_type_id=user.user_type_id
+        # we can't leave this decision to users to the default will be user type
+        user_type_id=2
     )
 
     db.add(new_user)
@@ -275,6 +273,7 @@ async def get_user(user_id: int, db: SessionDep):
     **UserPublic** encoded in JSON, which has mentioned Fields
     * **id**: `int` -> user id
     * **username**: `str` -> user username
+    * **joined_at**: `datetime.datetime` -> user joining date
 
     * **HTTP STATUS 404** -> User not found
     """

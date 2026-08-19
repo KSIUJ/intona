@@ -17,18 +17,18 @@ class ExerciseBase(BaseModel):
     exercise_name: str
 
 class ExerciseInfo(ExerciseBase):
-    difficulty: DifficultyEnum
+    difficulty: DifficultyEnum = Field("Exercise difficulty rating", examples=["Easy", "Medium", "Hard"])
     rating: int
-    exercise_type: ExerciseTypeInfo
+    exercise_type: ExerciseTypeInfo = Field("Exercise type", examples=["Song", "Exercise"])
 
 class ExerciseResult(BaseModel):
-    exercise_duration: float
-    time_in_tune: float
-    average_deviation: float
-    exercise_end_status: EndingStatusEnum
+    exercise_duration: float = Field(description="Exercise duration in seconds", ge=0)
+    time_in_tune: float = Field(description="Time in tune in scale 1-100%", ge=0, lt=100)
+    average_deviation: float = Field(description="Average deviation in tune in scale 1-100%", ge=0, lt=100)
+    exercise_end_status: EndingStatusEnum = Field(description="Ending status of exercise", examples=["Stopped","Exited"])
 
 class ExerciseDeleteInfo(BaseModel):
-    secret_exercise_token: str
+    secret_exercise_token: str = Field(description="It's secret token for this exercise, it is used for storing results of this exercise", examples=[""])
 
 class TestingExerciseInfo(BaseModel):
     midi_file: HttpUrl = Field(description="MIDI file presigned_url",

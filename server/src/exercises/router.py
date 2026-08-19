@@ -53,6 +53,7 @@ async def get_exercises(db: SessionDep):
     exercises = await db.exec(select(Exercise))
     return exercises.all()
 
+
 # for testing purposes only, later it will be deleted and /{exericse_id}/start will do its job
 @router.get("/playing-test", response_model=TestingExerciseInfo)
 async def get_testing_files():
@@ -78,14 +79,38 @@ async def get_testing_files():
 
 @router.get("/types", response_model=list[ExerciseTypeInfo])
 async def get_exercise_types(db: SessionDep):
+    """
+    > This endpoint returns all available exercise types, it's needed for showing all exercise by types
+
+    Returns **JSON Encoded data** which represents list of `ExerciseTypeInfo` models which consists of:
+
+    ```json
+    {
+        "id": int -> exercise type id
+        "type": str -> exercise type name
+    }
+    """
     result = await db.exec(select(ExerciseType))
     result = result.all()
     return result
 
 
 # for now it should be Songs/Exercise
-@router.get("/list/{exercise_type}")
+@router.get("/list/{exercise_type}", response_model=list[ExerciseInfo])
 async def get_exercises_by_category(db: SessionDep, exercise_type: ExerciseTypeEnum):
+    """
+    > This endpoint returns all available exercise by specified category
+
+    Params:
+    * exercise_type: ExerciseTypeEnum -> One of ExerciseTypeEnum values (Song, Exercise), i will need to later create dynamic enum so that types aren't hardcoded
+
+    Returns **JSON Encoded data** which represents list of `ExerciseTypeInfo` models which consists of:
+    ```json
+    {
+        "id": int -> exercise type id
+        "type": str -> exercise type name
+    }
+    """
     exercises_by_type = await db.exec(select(Exercise).join(ExerciseType).where(ExerciseType.type == exercise_type))
     return exercises_by_type.all()
 

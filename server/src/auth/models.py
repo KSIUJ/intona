@@ -41,16 +41,18 @@ class RefreshToken(SQLModel, table=True):
     __tablename__ = "refresh_token"
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(default=None, foreign_key="users.id")
-    payload: str = Field(nullable=False)
+    payload: str = Field(nullable=False, description="The refresh token content, refresh token can be used to refresh access token, and is needed for login / logout because you can't revoke access tokens")
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_type=DateTime(timezone=True),
-        nullable=False
+        nullable=False,
+        description="refresh token creation date"
     )
     expires_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_type=DateTime(timezone=True),
-        nullable=False
+        nullable=False,
+        description="refresh token expiration date, when the cron job sees that it is smaller than current date then the whole record will be deleted (user logout)"
     )
 
     user: User = Relationship(back_populates="refresh_tokens" ,sa_relationship_kwargs={"lazy": "selectin", "uselist": False})

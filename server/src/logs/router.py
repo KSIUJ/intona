@@ -19,7 +19,7 @@ async def create_log(session: SessionDep,
     ### Parameters:
     * **token**: `str` -> token, should be typed into authentication header
     * **exercise_id**: `int` -> id of exercise which log is to be created
-    * **exercise_duration**: `int` -> duration of exercise in milliseconds
+    * **exercise_duration**: `int` -> duration of exercise in seconds
     * **time_in_tune**: `float` -> percent of our exercise completion
     * **average_deviation**: `float` -> average deviation of exercise
 
