@@ -77,10 +77,14 @@ const Carousel = ({type, title}) => {
     const fetchExercises = async (type) => {
         const api_response = await fetch(`/api/exercises/list/${type}`)
         if (!api_response.ok) {
-            throw new Error("Error from loading category")
+            const errorText = await api_response.text();
+            console.error("error message:", errorText);
+
+            const api_response_error = new Error(errorText);
+            api_response_error.status = api_response.status;
+            throw api_response_error;
         }
         const response_json = await api_response.json()
-        console.log(response_json)
         return response_json
     }
 

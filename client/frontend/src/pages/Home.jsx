@@ -17,8 +17,12 @@ const Home = () => {
     const fetchExerciseTypes = async () => {
         const api_response = await fetch(`/api/public/exercises/types`)
         if (!api_response.ok) {
-            console.log("Error from loading types")
-            throw new Error("Error from loading types")
+            const errorText = await response.text();
+            console.error("error message:", errorText);
+
+            const api_response_error = new Error(errorText);
+            api_response_error.status = response.status;
+            throw api_response_error;
         }
         const response_json = await api_response.json()
         console.log(response_json)
@@ -31,7 +35,12 @@ const Home = () => {
             method: 'POST'
         })
         if (!response.ok) {
-            console.log(`${response.status} ${response.statusText}`)
+            const errorText = await response.text();
+            console.error("error message:", errorText);
+
+            const api_response_error = new Error(errorText);
+            api_response_error.status = response.status;
+            throw api_response_error;
         }
     }
 

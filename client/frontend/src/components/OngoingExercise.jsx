@@ -55,59 +55,56 @@ export default function OngoingExercise() {
 
 
     const deleteExerciseAccess = async (log_id, exercise_access_token) => {
-        try {
-            const api_response = await fetch(`/api/exercises/${log_id}/end`, {
-                method: "DELETE",
-                credentials: 'include',
-                headers: {
-                    "content-type": "application/json",
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify({
-                    secret_exercise_token: exercise_access_token
-                })
+        const api_response = await fetch(`/api/exercises/${log_id}/end`, {
+            method: "DELETE",
+            credentials: 'include',
+            headers: {
+                "content-type": "application/json",
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                secret_exercise_token: exercise_access_token
             })
+        })
 
-            if (!api_response.ok) {
-                const api_error = new Error(`${api_response.statusText}`)
-                api_error.status = api_response.status
-                throw api_error
-            }
+        if (!api_response.ok) {
+            const errorText = await api_response.text();
+            console.error("error message:", errorText);
 
-        } catch (error) {
-            throw error
+            const api_response_error = new Error(errorText);
+            api_response_error.status = api_response.status;
+            throw api_response_error;
         }
 
 
     }
     const communicateExerciseEnd = async (log_id, exercise_duration, time_in_tune, average_deviation, exercise_end_status) => {
-        try {
-            const api_response = await fetch(`/api/exercises/${log_id}/end`, {
-                method: "POST",
-                credentials: 'include',
-                headers: {
-                    "content-type": "application/json",
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify({
-                    exercise_duration: exercise_duration,
-                    time_in_tune: time_in_tune,
-                    average_deviation: average_deviation,
-                    exercise_end_status: exercise_end_status
-                })
+        const api_response = await fetch(`/api/exercises/${log_id}/end`, {
+            method: "POST",
+            credentials: 'include',
+            headers: {
+                "content-type": "application/json",
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                exercise_duration: exercise_duration,
+                time_in_tune: time_in_tune,
+                average_deviation: average_deviation,
+                exercise_end_status: exercise_end_status
             })
+        })
 
-            if (!api_response.ok) {
-                const api_error = new Error(`${api_response.statusText}`)
-                api_error.status = api_response.status
-                throw api_error
-            }
+        if (!api_response.ok) {
+            const errorText = await api_response.text();
+            console.error("error message:", errorText);
 
-            const api_response_json = await api_response.json()
-            return api_response_json
-        } catch (error) {
-            throw error
+            const api_response_error = new Error(errorText);
+            api_response_error.status = api_response.status;
+            throw api_response_error;
         }
+
+        const api_response_json = await api_response.json()
+        return api_response_json
     }
 
 
@@ -156,7 +153,7 @@ export default function OngoingExercise() {
         const exercise_access_token = localStorage.getItem("exercise_access_token")
         if (exercise_access_token !== null) {
             if (localStorage.getItem("time") !== null)
-                audio.time.current=parseFloat(localStorage.getItem("time"))
+                audio.time.current = parseFloat(localStorage.getItem("time"))
             else {
                 audio.time.current = 0
             }
@@ -166,7 +163,7 @@ export default function OngoingExercise() {
         } else {
             localStorage.setItem("exercise_access_token", state.exercise_access_token)
             localStorage.setItem("time", "0")
-            localStorage.setItem("average_deviation","0")
+            localStorage.setItem("average_deviation", "0")
             localStorage.setItem("time_in_tune", "0")
         }
 

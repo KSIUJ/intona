@@ -12,35 +12,34 @@ const Login = () => {
     const {isSuccess, isLoading} = useQuery({
         queryKey: ["check"], queryFn: checkIfLoggedIn, retry: false,
         staleTime: 1000 * 60 * 60, // 1 hour in ms
-      cacheTime: 1000 * 60 * 60, // 1 hour in ms
-      refetchOnWindowFocus: false,
+        cacheTime: 1000 * 60 * 60, // 1 hour in ms
+        refetchOnWindowFocus: false,
     })
 
     const {mutate} = useMutation({
         mutationFn: (formData) => getToken(formData),
         onSuccess() {
-            queryClient.invalidateQueries({ queryKey: ["logged_check"] })
+            queryClient.invalidateQueries({queryKey: ["logged_check"]})
             navigate("/dashboard")
         }
     })
 
     const getToken = async (formData) => {
-        try {
-            const response = await fetch("/api/auth/token", {
-                method: "POST",
-                body: formData, // FormData jest wysyłana bezpośrednio jako body
-            });
+        const response = await fetch("/api/auth/token", {
+            method: "POST",
+            body: formData, // FormData jest wysyłana bezpośrednio jako body
+        });
 
-            if (!response.ok) {
-                throw new Error(`Błąd logowania: ${response.status}`);
-            }
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("error message:", errorText);
 
-        } catch (error) {
-            console.error("Wystąpił błąd:", error.message);
+            const api_response_error = new Error(errorText);
+            api_response_error.status = response.status;
+            throw api_response_error;
         }
+
     }
-
-
 
 
     const handleSubmit = (event) => {
@@ -73,13 +72,13 @@ const Login = () => {
                 </nav>
 
                 <div className="auth-nav">
-                    <button className="login-link" type="button">
+                    <Link to={"/login"} className="login-link" type="button">
                         Log in
-                    </button>
+                    </Link>
 
-                    <button className="signup-button" type="button">
+                    <Link to={"/sign_up"} className="signup-button" type="button">
                         Sign up
-                    </button>
+                    </Link>
                 </div>
             </header>
 

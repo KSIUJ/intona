@@ -1,13 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
 import "./Carousel.css";
 import {useRef} from "react";
-import {Link} from "react-router-dom";
 import Chip from '@mui/material/Chip';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardActionArea from '@mui/material/CardActionArea';
 import Typography from '@mui/material/Typography';
-import {useQuery} from "@tanstack/react-query";
 
 
 const difficultyColors = {

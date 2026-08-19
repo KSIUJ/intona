@@ -150,8 +150,12 @@ function Dashboard() {
         })
 
         if (!api_response.ok) {
-            console.log(`${api_response.status} ${api_response.statusText}`)
-            navigate("/")
+            const errorText = await api_response.text();
+            console.error("error message:", errorText);
+
+            const api_response_error = new Error(errorText);
+            api_response_error.status = api_response.status;
+            throw api_response_error;
         }
 
         const api_response_json = await api_response.json()
