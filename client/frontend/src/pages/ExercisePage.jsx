@@ -36,8 +36,10 @@ const ExercisePage = () => {
     const {mutate} = useMutation({
         mutationFn: (data) => verifyUser(data.id, data.exercise_slug),
         onSuccess: (data) => {
-            console.log("success with starting exercise")
-            localStorage.setItem("exercise_access_token", data.exercise_access_token)
+            localStorage.removeItem('exercise_access_token')
+            localStorage.removeItem('time')
+            localStorage.removeItem('time_in_tune')
+            localStorage.removeItem('average_deviation')
             navigate(`/exercises/${data.id}/${data.exercise_slug}/start`, {
                 state: {
                     presigned_url: data.presigned_url,
@@ -55,6 +57,7 @@ const ExercisePage = () => {
     const handleClick = (e) => {
         e.preventDefault()
         mutate({id: id, exercise_slug: exercise_slug})
+
     }
     return (
         <main>

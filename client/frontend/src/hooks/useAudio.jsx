@@ -9,53 +9,70 @@ export default function useAudio(presigned_url) {
     const intervalId = useRef(null)
     const time = useRef(0)
 
-    const hasEndedEventEmitter = new mitt() // in this library constructor starts with lowercase
+    const hasEndedEventEmitter = useRef(mitt()) // in this library constructor starts with lowercase
 
 
     useEffect(() => {
-        if (!presigned_url) {
-            return;
-        }
         const handleEndEvent = () => {
-            hasEndedEventEmitter.emit("end")
-            clearInterval(intervalId.current)
+            hasEndedEventEmitter.current.emit("end")
+            audio.current.pause()
+            if (intervalId.current) {
+                clearInterval(intervalId.current)
+            }
         }
-        audio.current = new Audio(presigned_url);
+        if (!audio.current)
+            audio.current = new Audio(presigned_url);
 
         audio.current.loop = false
-        audio.current?.addEventListener("ended", handleEndEvent)
+        audio.current.addEventListener("ended", handleEndEvent)
 
         return () => {
-            audio.current.pause();
             audio.current.removeEventListener("ended", handleEndEvent);
+            audio.current.pause()
             audio.current = null;
+            if (intervalId.current) {
+                clearInterval(intervalId.current)
+            }
+
         }
-    }, [presigned_url])
+    }, [])
 
     async function Start() {
-        await audio.current.play();
+        if (!audio.current) {
+            return
+        }
+        try {
+            await audio.current.play()
+        } catch (e) {
+            console.log("too early pressed play")
+            return;
+        }
+
+        if (!audio.current) {
+            return;
+        }
         intervalId.current = setInterval(() => {
-            time.current += 10;
-            console.log(time.current)
+            time.current = audio.current.currentTime * 1000
         }, 10)
+
     }
 
     function Stop() {
+        if (!audio.current) {
+            return
+        }
         audio.current.pause();
-        clearInterval(intervalId.current)
+        if (intervalId.current) {
+            clearInterval(intervalId.current)
+            intervalId.current = null;
+        }
     }
 
     async function Toggle() {
-        if (!presigned_url) {
-            return;
-        }
         setPlaying(prev => !prev);
     }
 
     function ChangeVolume(step) {
-        if (!presigned_url) {
-            return;
-        }
         if (step > 0) {
             step = 0.05;
             audio.current.volume = Math.min(1, audio.current.volume + step);
@@ -67,7 +84,12 @@ export default function useAudio(presigned_url) {
         console.log(audio.current.volume)
     }
 
+    function FastForward(time_to) {
+        audio.current.currentTime = time_to
+    }
+
     useEffect(() => {
+        console.log("use effect from use audio 2")
         if (isPlaying) {
             Stop()
         } else {
@@ -79,5 +101,5 @@ export default function useAudio(presigned_url) {
         setPlaying(prev => !prev);
     }, []);
 
-    return {hasEndedEventEmitter, ChangeVolume, Toggle, isPlaying, time};
+    return {hasEndedEventEmitter, FastForward, ChangeVolume, Toggle,  isPlaying, time};
 }
