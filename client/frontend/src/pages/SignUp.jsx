@@ -96,15 +96,15 @@ const SignUp = () => {
                         <span className="login-logo-shape"></span>
                     </div>
                     <header className="login-header">
-                        <h1>Log in to your account</h1>
-                        <p>Welcome back! Please enter your details.</p>
+                        <h1>Sign up for your account</h1>
+                        <p>We hope you will have good time using our website!</p>
                     </header>
 
                     {/*later when everything is done i will change it to useMutation and mutate, but for now i don't exactly know
         what to do with formData and mutate*/}
                     <form className="login-form" onSubmit={handleSubmit}>
                         <div className="form-group">
-                            <label htmlFor="username">username</label>
+                            <label htmlFor="username">Username</label>
 
                             <input
                                 id="username"
@@ -138,19 +138,9 @@ const SignUp = () => {
                                 required
                             />
                         </div>
-                        <div className="form-options">
-                            <label className="remember-option">
-                                <input type="checkbox" name="remember"/>
-                                <span>Remember for 30 days</span>
-                            </label>
-
-                            <button className="forgot-password" type="button">
-                                Forgot password
-                            </button>
-                        </div>
 
                         <button className="sign-in-button" type="submit">
-                            Sign in
+                            Sign up
                         </button>
                     </form>
                 </section>

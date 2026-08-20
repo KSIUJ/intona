@@ -129,7 +129,8 @@ app.use("/api/public", upload.none(), async (req, res) => {
         const api_response = await fetch(`${process.env.API_URL}/api${req.url}`, {
             method: req.method,
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify(req.body)
         })

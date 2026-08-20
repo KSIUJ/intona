@@ -160,7 +160,7 @@ async def logout(db: SessionDep, refresh_token: str = Form()):
     """
     if refresh_token != "NONE":
         refresh_token_db = await db.exec(select(RefreshToken).where(RefreshToken.payload == refresh_token))
-        refresh_token_db = refresh_token_db.one()
+        refresh_token_db = refresh_token_db.first()
         if not refresh_token_db:
             return
         await db.delete(refresh_token_db)
@@ -192,7 +192,13 @@ async def refresh_access_token(db: SessionDep, refresh_token: str = Form()):
     **HTTP STATUS 401** -> when the token doesn't exist or someone deleted it using logout
     """
     refresh_token_db = await db.exec(select(RefreshToken).where(RefreshToken.payload == refresh_token))
-    refresh_token_db: RefreshToken = refresh_token_db.one()
+    refresh_token_db: RefreshToken | None = refresh_token_db.first()
+
+    if not refresh_token_db:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Refresh token not found",
+        )
 
     if refresh_token_db.expires_at < datetime.now(UTC):
         await db.delete(refresh_token_db)
@@ -203,11 +209,7 @@ async def refresh_access_token(db: SessionDep, refresh_token: str = Form()):
             detail="Refresh token expired",
         )
 
-    if not refresh_token_db:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Refresh token not found",
-        )
+
 
     user_id = refresh_token.split("-")[0]
 

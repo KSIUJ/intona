@@ -2,12 +2,13 @@ import {Link} from "react-router-dom";
 import {useNavigate} from "react-router-dom";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {checkIfLoggedIn} from "../utils/utils.js";
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
 
 const Login = () => {
 
     const navigate = useNavigate()
     const queryClient = useQueryClient()
+    const [email_value, setEmailValue] = useState('')
 
     const {isSuccess, isLoading} = useQuery({
         queryKey: ["check"], queryFn: checkIfLoggedIn, retry: false,
@@ -103,6 +104,8 @@ const Login = () => {
                                 name="email"
                                 type="email"
                                 placeholder="Enter your email"
+                                value={email_value}
+                                onInput={(e) => setEmailValue(e.target.value)}
                                 required
                             />
                         </div>
@@ -124,9 +127,9 @@ const Login = () => {
                                 <span>Remember for 30 days</span>
                             </label>
 
-                            <button className="forgot-password" type="button">
+                            <Link to={`/forgot_password?email=${email_value}`} className="forgot-password" type="button">
                                 Forgot password
-                            </button>
+                            </Link>
                         </div>
 
                         <button className="sign-in-button" type="submit">
