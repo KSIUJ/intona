@@ -14,8 +14,6 @@ const Login = () => {
 
       <nav className="main-nav">
         <Link to="/home"> Home</Link>
-        <Link to="/about">About us</Link>
-        <Link to="/contact">Contact</Link>
       </nav>
 
       <div className="auth-nav">

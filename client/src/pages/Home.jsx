@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Avatar from "@mui/material/Avatar";
 import Carousel from "../components/Carousel";
 
 
 const Home = () => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   return (
@@ -25,15 +26,15 @@ const Home = () => {
           </button>
 
           {open && (
-            <div className="avatar-dropdown">
-              <button type="button">
-                <Link to="/dashboard">Dashboard</Link>
-              </button>
-              <button type="button">
-                <Link to="/">Log out</Link>
-              </button>
-            </div>
-          )}
+          <div className="avatar-dropdown">
+          <button type="button" onClick={() => navigate("/dashboard")}>
+              Dashboard
+          </button>
+          <button type="button" onClick={() => navigate("/")}>
+            Log out
+          </button>
+          </div>
+)}
         </div>
       </header>
 
