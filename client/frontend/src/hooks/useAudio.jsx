@@ -1,7 +1,6 @@
 import {useEffect, useState, useRef} from "react";
 import mitt from 'mitt'
 
-
 export default function useAudio(presigned_url) {
     const [isPlaying, setPlaying] = useState(false);
 

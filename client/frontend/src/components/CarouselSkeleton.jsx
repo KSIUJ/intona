@@ -7,14 +7,6 @@ import CardContent from '@mui/material/CardContent';
 import CardActionArea from '@mui/material/CardActionArea';
 import Typography from '@mui/material/Typography';
 
-
-const difficultyColors = {
-    Easy: "success",
-    Medium: "warning",
-    Hard: "error",
-};
-
-
 const ExerciseCard = () => {
 
     return (

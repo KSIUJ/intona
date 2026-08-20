@@ -143,7 +143,6 @@ function AchievementIcon() {
 }
 
 function Dashboard() {
-    const navigate = useNavigate()
     const fetchUserStats = async () => {
         const api_response = await fetch(`/api/user/stats`, {
             credentials: 'include'
