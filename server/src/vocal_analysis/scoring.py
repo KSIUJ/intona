@@ -10,7 +10,6 @@ def calculate_frame_score(freq_hz: float, target_freq_hz: float) -> float:
     """
     if freq_hz <= 0 or target_freq_hz <= 0:
         return 0.0
-h
     cents_error = abs(1200 * np.log2(freq_hz / target_freq_hz))
 
     if cents_error <= 15:
