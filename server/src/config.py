@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     bucket_secret_key: SecretStr
     bucket_access_key: SecretStr
 
+    resend_api_key: SecretStr
+
     successful_upload_url: str
 
     model_config = SettingsConfigDict(

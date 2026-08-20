@@ -1,20 +1,25 @@
+import logging
 import random
 import string
 import uuid
 from datetime import datetime, UTC, timedelta
 
+import resend
 from fastapi import APIRouter, HTTPException
 from sqlmodel import select
 
+from src.config import settings
 from src.auth.utils import hash_password
 from src.auth.models import User
-from src.services.email_reset.utils import verify_email_payload, delete_payload
+from src.services.email_reset.utils import verify_email_payload, delete_payload, getHtmlCodeTemplate
 from src.services.email_reset.schemas import EmailTokenResponse, EmailResetData
 from src.services.email_reset.models import EmailVerifyCode, EmailVerifyToken
 from src.services.email_reset.schemas import EmailData, EmailDataWithCode
 from src.database import SessionDep
 
 router = APIRouter()
+
+logging.basicConfig(level=logging.INFO)
 
 
 @router.post("/request_reset")
@@ -23,7 +28,27 @@ async def request_reset(db: SessionDep, email_data: EmailData):
                                expire_at=datetime.now(UTC) + timedelta(minutes=5))
     db.add(code_row)
     await db.commit()
-    return {"message": "password reset request sent"}
+    await db.refresh(code_row)
+
+    user_to_send_email = await db.exec(select(User).where(User.email == email_data.email))
+    user = user_to_send_email.first()
+
+    if not user:
+        return {"message": "password reset request sent if your email is correct"}
+
+    resend.api_key = settings.resend_api_key.get_secret_value()
+
+    params: resend.Emails.SendParams = {
+        "from": "Intona <password_reset@intonavibe.pl>",
+        "to": [f"{email_data.email}"],
+        "subject": "Password reset email",
+        "html": getHtmlCodeTemplate(code_row.payload)
+    }
+
+    email = resend.Emails.send(params)
+    logging.info(email)
+
+    return {"message": "password reset request sent if your email is correct"}
 
 @router.post("/verify_code", response_model=EmailTokenResponse)
 async def verify_email(db: SessionDep, email_data: EmailDataWithCode):
