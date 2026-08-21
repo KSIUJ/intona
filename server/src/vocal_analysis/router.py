@@ -30,12 +30,6 @@ async def evaluate_and_save_exercise(
             detail=f"Exercise with id {submission.exercise_id} not found",
         )
 
-    if not exercise.processed:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Exercise is not processed yet",
-        )
-
     # Downloading reference scores directly from S3 (results.json)
     target_notes = fetch_target_notes_from_s3(exercise.id)
 
