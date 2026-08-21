@@ -8,6 +8,7 @@ import CardContent from '@mui/material/CardContent';
 import CardActionArea from '@mui/material/CardActionArea';
 import Typography from '@mui/material/Typography';
 import {useQuery} from "@tanstack/react-query";
+import {useWindowSize} from "@reactuses/core/useWindowSize";
 
 
 export let exercises = [
@@ -36,6 +37,7 @@ const difficultyColors = {
 
 
 const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type, clickable}) => {
+    const {width, height} = useWindowSize();
 
     return (
         <Card className="carousel-card">
@@ -54,15 +56,18 @@ const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type, clic
                         padding: '20px 12px',
                     }}
                 >
-                    <Typography variant="subtitle1" sx={{fontWeight: 600}}>
+                    <Typography variant="subtitle1" sx={{fontWeight: 600}}
+                                className={width > 600 && width < 920 ? "mui-h6" : ""}>
                         {title}
                     </Typography>
                     <Chip
                         label={difficulty}
                         color={difficultyColors[difficulty] || "default"}
                         size="small"
+                        className={width > 600 && width < 920 ? "mui-info" : ""}
                     />
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary"
+                                className={width > 600 && width < 920 ? "mui-info" : ""}>
                         {rating}
                     </Typography>
                 </CardContent>
@@ -73,7 +78,6 @@ const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type, clic
 
 
 const Carousel = ({type, title}) => {
-
     const fetchExercises = async (type) => {
         const api_response = await fetch(`/api/exercises/list/${type}`)
         if (!api_response.ok) {
