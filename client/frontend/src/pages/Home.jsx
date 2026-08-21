@@ -38,9 +38,7 @@ const Home = () => {
             const errorText = await response.text();
             console.error("error message:", errorText);
 
-            const api_response_error = new Error(errorText);
-            api_response_error.status = response.status;
-            throw api_response_error;
+            console.log(errorText)
         }
     }
 
@@ -54,7 +52,10 @@ const Home = () => {
     const {isSuccess, isLoading, isError} = useQuery({
         queryKey: ["logged_check"],
         queryFn: checkIfLoggedIn,
-        retry: false
+        retry: false,
+        refetchOnWindowFocus: (query) => {
+            return query.state.status !== 'error';
+        }
     })
 
     const {mutate} = useMutation({
@@ -79,19 +80,19 @@ const Home = () => {
                     <span>INTONA</span>
                 </Link>
 
+                {isSuccess &&
+                    <div className="avatar-menu">
+                        <button
+                            className="avatar-toggle"
+                            type="button"
+                            onClick={() => setOpen((prev) => !prev)}
+                        >
+                            <Avatar alt="User avatar" src="avatar.png" className="avatar"/>
+                        </button>
 
-                <div className="avatar-menu">
-                    <button
-                        className="avatar-toggle"
-                        type="button"
-                        onClick={() => setOpen((prev) => !prev)}
-                    >
-                        <Avatar alt="User avatar" src="avatar.png" className="avatar"/>
-                    </button>
+                        {open && (
+                            <div className="avatar-dropdown">
 
-                    {open && (
-                        <div className="avatar-dropdown">
-                            {isSuccess &&
                                 <>
                                     <button type="button">
                                         <Link to="/dashboard">Dashboard</Link>
@@ -100,13 +101,18 @@ const Home = () => {
                                     <button type="button" onClick={mutate}>
                                         Sign out
                                     </button>
-                                </>}
-                            {isError && <button type="button" onClick={() => navigate("/login")}>
-                                Sign in
-                            </button>}
-                        </div>
-                    )}
-                </div>
+                                </>
+                            </div>)}
+                    </div>}
+                {isError && <div className="auth-nav">
+                    <Link to={"/login"} className="login-link" type="button">
+                        Log in
+                    </Link>
+
+                    <Link to={"/sign_up"} className="signup-button" type="button">
+                        Sign up
+                    </Link>
+                </div>}
             </header>
 
             <main>

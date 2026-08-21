@@ -175,6 +175,7 @@ app.use("/api", upload.none(), async (req, res, next) => {
                 sameSite: 'strict',
                 path: '/'
             });
+            req.cookies.access_token = refresh_response_json.access_token
         }
         next()
     } catch (error) {

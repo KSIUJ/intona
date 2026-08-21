@@ -34,6 +34,7 @@ async def request_reset(db: SessionDep, email_data: EmailData):
     user = user_to_send_email.first()
 
     if not user:
+        logging.info("Someone tried to send an email with an invalid email")
         return {"message": "password reset request sent if your email is correct"}
 
     resend.api_key = settings.resend_api_key.get_secret_value()
