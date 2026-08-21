@@ -1,6 +1,12 @@
+from datetime import datetime, UTC
+from typing import TYPE_CHECKING
+
+from sqlalchemy import DateTime
 from sqlmodel import SQLModel, Field, Relationship
 
-from src.logs.models import ExerciseLogs
+if TYPE_CHECKING:
+    from src.logs.models import ExerciseLogs
+    from src.stats.models import UserStats
 
 class UserType(SQLModel, table=True):
     __tablename__ = "users_type"
@@ -16,9 +22,37 @@ class User(SQLModel, table=True):
     username: str = Field(unique=True, index=True, nullable=False)
     email: str = Field(unique=True, index=True, nullable=False)
     password_hash: str = Field(nullable=False)
+    joined_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_type=DateTime(timezone=True),
+        nullable=False
+    )
 
     user_type_id: int = Field(nullable=False, default=2, foreign_key="users_type.id")
     # in the near future i will change this to lazy loading now it is eager loading
     type: UserType = Relationship(back_populates="users", sa_relationship_kwargs={"lazy": "selectin"})
     stats: "UserStats" = Relationship(back_populates="user",sa_relationship_kwargs={"lazy": "selectin", "uselist": False} )
-    logs: list[ExerciseLogs] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "raise"})
+    logs: list["ExerciseLogs"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "selectin"})
+    # for testing purposes refresh tokens will be one to many, later i will think about making it one to one
+    refresh_tokens: list["RefreshToken"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "selectin"})
+
+
+class RefreshToken(SQLModel, table=True):
+    __tablename__ = "refresh_token"
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(default=None, foreign_key="users.id")
+    payload: str = Field(nullable=False, description="The refresh token content, refresh token can be used to refresh access token, and is needed for login / logout because you can't revoke access tokens")
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_type=DateTime(timezone=True),
+        nullable=False,
+        description="refresh token creation date"
+    )
+    expires_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_type=DateTime(timezone=True),
+        nullable=False,
+        description="refresh token expiration date, when the cron job sees that it is smaller than current date then the whole record will be deleted (user logout)"
+    )
+
+    user: User = Relationship(back_populates="refresh_tokens" ,sa_relationship_kwargs={"lazy": "selectin", "uselist": False})

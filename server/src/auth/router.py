@@ -1,17 +1,21 @@
+import logging
+import uuid
 from datetime import timedelta, datetime, UTC
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import select, func
 
 from src.config import settings
-from src.auth.models import User
-from src.auth.schemas import UserCreate, UserPrivate, UserPublic, Token
+from src.auth.models import User, RefreshToken
+from src.auth.schemas import UserCreate, UserPrivate, UserPublic, Token, Tokens
 from src.auth.utils import hash_password, verify_password, create_access_token
 from src.auth.dependencies import AdminUser, CurrentUser, SessionDep
 from src.stats.models import UserStats
 from src.exercises.models import ExerciseType
+
+logging.basicConfig(level=logging.INFO)
 
 router = APIRouter()
 
@@ -24,9 +28,6 @@ async def create_user(user: UserCreate, db: SessionDep):
     * **username**: `str` -> name of user
     * **email**: `str` -> email of user
     * **password**: `str` -> password of user
-    * **user_type_id**: `int` -> id of user type, which has members mentioned below:
-        * admin: 1
-        * user: 2
 
     ### Returns:
     **UserPrivate** encoded in JSON, which has mentioned Fields
@@ -55,7 +56,8 @@ async def create_user(user: UserCreate, db: SessionDep):
         username=user.username,
         email=user.email.lower(),
         password_hash=hash_password(user.password),
-        user_type_id=user.user_type_id
+        # we can't leave this decision to users to the default will be user type
+        user_type_id=2
     )
 
     db.add(new_user)
@@ -66,25 +68,34 @@ async def create_user(user: UserCreate, db: SessionDep):
     exercise_types = exercise_types.all()
 
     user_stats = UserStats(id=new_user.id,
-                           averageScore=0,
-                           averageScoreByCategory={exercise.type: 0 for exercise in exercise_types},
-                           currentStreak=0,
-                           longestStreak=0,
-                           masteredPercentage=0,
-                           exercisesCompleted=0,
-                           lastActivityDate=datetime.now(UTC))
+                           average_score=0,
+                           average_score_by_category={exercise.type: {"score": 0, "count": 0} for exercise in exercise_types},
+                           current_streak=0,
+                           longest_streak=0,
+                           mastered_percentage=0,
+                           exercises_completed=0,
+                           total_practice_time=0,
+                           days_active=0,
+                           favorite_exericse=None,
+                           last_activity_date=datetime.now(UTC))
     db.add(user_stats)
     await db.commit()
+    await db.refresh(new_user)
+
 
     return new_user
 
-@router.post("/token", response_model=Token)
+
+
+@router.post("/token", response_model=Tokens)
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: SessionDep,
+    remember_login: str = Form()
 ):
     """
-    Verifies whether typed username and password are correct
+    Verifies whether typed username and password are correct and if valid returns refresh token and
+    access token in json format
 
     Data should be typed as a form-data
 
@@ -96,12 +107,18 @@ async def login_for_access_token(
     JSON encoded data in format mentioned below:
     ```json
     {
-        "access_token": "str -> access token",
-        "token_type": "str -> token type e.g. bearer"
+        "access_token": {
+            "access_token": "str -> access token",
+            "token_type": "str -> token type e.g. bearer"
+        },
+        "refresh_token": "str -> refresh token"
+
+
     }
     ```
     **HTTP STATUS 401** -> when username doesn't exist, or email doesn't exist
     """
+    remember_login = True if remember_login == "true" else False
     result = await db.exec(
         select(User).where(func.lower(User.email) == form_data.username.lower())
     )
@@ -115,11 +132,96 @@ async def login_for_access_token(
         )
 
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
-    access_token = create_access_token(
+    access_token_payload = create_access_token(
         data={"sub": str(user.id)},
         expires_delta=access_token_expires,
     )
-    return Token(access_token=access_token, token_type="bearer")
+    refresh_token_payload = str(user.id) + "-" + str(uuid.uuid4())
+    access_token = Token(access_token=access_token_payload, token_type="bearer")
+    refresh_token = RefreshToken(user_id=user.id, payload=refresh_token_payload, created_at=datetime.now(UTC), expires_at=datetime.now(UTC) + timedelta(days=30) if remember_login == True else datetime.now(UTC) + timedelta(hours=12))
+
+    db.add(refresh_token)
+    await db.commit()
+
+    return Tokens(access_token=access_token, refresh_token=refresh_token_payload)
+
+@router.post("/logout")
+async def logout(db: SessionDep, refresh_token: str = Form()):
+    """
+    Deletes refresh token in database so that logout works
+
+    Data should be typed as a form-data
+
+    ### Parameters:
+    * **refresh_token**: `str` -> refresh token to delete
+
+    ### Returns:
+    * ** HTTP STATUS 200 **
+    """
+    if refresh_token != "NONE":
+        refresh_token_db = await db.exec(select(RefreshToken).where(RefreshToken.payload == refresh_token))
+        refresh_token_db = refresh_token_db.first()
+        if not refresh_token_db:
+            return
+        await db.delete(refresh_token_db)
+        await db.commit()
+    else:
+        return
+
+
+
+
+@router.post("/refresh", response_model=Token)
+async def refresh_access_token(db: SessionDep, refresh_token: str = Form()):
+    """
+    Refreshes access token using refresh_token
+
+    Data should be typed as a form-data
+
+    ### Parameters:
+    * **refresh_token**: `str` -> refresh token which is used to check if user should be able to generate new access token
+
+    ### Returns:
+    JSON encoded data in format mentioned below:
+    ```json
+    {
+        "access_token": "str -> access token",
+        "token_type": "str -> token type e.g. bearer"
+    }
+    **HTTP STATUS 400** -> if the token which you have is expired
+    **HTTP STATUS 401** -> when the token doesn't exist or someone deleted it using logout
+    """
+    refresh_token_db = await db.exec(select(RefreshToken).where(RefreshToken.payload == refresh_token))
+    refresh_token_db: RefreshToken | None = refresh_token_db.first()
+
+    if not refresh_token_db:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Refresh token not found",
+        )
+
+    if refresh_token_db.expires_at < datetime.now(UTC):
+        await db.delete(refresh_token_db)
+        await db.commit()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Refresh token expired",
+        )
+
+
+
+    user_id = refresh_token.split("-")[0]
+
+    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+    access_token_payload = create_access_token(
+        data={"sub": str(user_id)},
+        expires_delta=access_token_expires,
+    )
+
+    return Token(access_token=access_token_payload, token_type="bearer")
+
+
 
 @router.get("/me", response_model=UserPrivate)
 async def get_current_user(current_user: CurrentUser):
@@ -173,8 +275,9 @@ async def get_user(user_id: int, db: SessionDep):
     **UserPublic** encoded in JSON, which has mentioned Fields
     * **id**: `int` -> user id
     * **username**: `str` -> user username
+    * **joined_at**: `datetime.datetime` -> user joining date
 
-    **HTTP STATUS 404** -> User not found
+    * **HTTP STATUS 404** -> User not found
     """
     result = await db.exec(select(User).where(User.id == user_id))
     user = result.first()

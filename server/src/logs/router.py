@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, status
-from sqlmodel import select
 
 from src.auth.dependencies import CurrentUser
 from src.database import SessionDep
@@ -9,7 +8,7 @@ from src.exercises.models import Exercise
 
 router = APIRouter()
 
-@router.post("/", response_model=ExerciseLogResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ExerciseLogResponse, status_code=status.HTTP_201_CREATED)
 async def create_log(session: SessionDep, 
                      log_data: ExerciseLogCreate, 
                      user: CurrentUser
@@ -20,7 +19,7 @@ async def create_log(session: SessionDep,
     ### Parameters:
     * **token**: `str` -> token, should be typed into authentication header
     * **exercise_id**: `int` -> id of exercise which log is to be created
-    * **exercise_duration**: `int` -> duration of exercise in milliseconds
+    * **exercise_duration**: `int` -> duration of exercise in seconds
     * **time_in_tune**: `float` -> percent of our exercise completion
     * **average_deviation**: `float` -> average deviation of exercise
 
@@ -35,8 +34,7 @@ async def create_log(session: SessionDep,
 
     # should we change this to session.exec(select(Exercise).where(Exercise.id == log_data.exercise_id))
     # or maybe we should change every other query with this format to session.get...?
-    exercise = await session.exec(select(Exercise).where(Exercise.id == log_data.exercise_id))
-    exercise = exercise.one()
+    exercise = await session.get(Exercise, log_data.exercise_id)
     if not exercise:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
