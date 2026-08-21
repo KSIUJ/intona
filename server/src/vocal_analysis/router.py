@@ -69,7 +69,7 @@ async def evaluate_and_save_exercise(
     # Database write and statistics update
     new_log = ExerciseLogs(
         exercise_id=exercise.id,
-        exercise_duration=submission.exercise_duration_ms,
+        exercise_duration=submission.exercise_duration_s,
         time_in_tune=overall_score,
         average_deviation=average_deviation,
         attempting_user_id=user.id,
@@ -86,6 +86,6 @@ async def evaluate_and_save_exercise(
         exercise_id=exercise.id,
         overall_score=overall_score,
         average_cents_deviation=average_deviation,
-        exercise_duration_ms=submission.exercise_duration_ms,
+        exercise_duration_s=submission.exercise_duration_s,
         notes_breakdown=notes_breakdown,
     )

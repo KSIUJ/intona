@@ -6,7 +6,7 @@ class PerformedNoteInput(BaseModel):
 
 class ExerciseSubmission(BaseModel):
     exercise_id: int
-    exercise_duration_ms: int
+    exercise_duration_s: int
     performed_notes: list[PerformedNoteInput]
 
 class NoteScoreResult(BaseModel):
@@ -19,5 +19,5 @@ class ExerciseEvaluationResponse(BaseModel):
     exercise_id: int
     overall_score: float  # Assigned to time_in_tune (0–100%)
     average_cents_deviation: float
-    exercise_duration_ms: int
+    exercise_duration_s: int
     notes_breakdown: list[NoteScoreResult]
