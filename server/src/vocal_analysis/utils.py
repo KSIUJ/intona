@@ -15,22 +15,24 @@ from src.services.s3_bucket import bucket_client
 
 def fetch_target_notes_from_s3(exercise_id: int) -> list[dict]:
     # Downloads the results.json file from S3 containing the generated reference musical scores
-    s3_key = f"exercise/{exercise_id}/results.json"
     try:
-        response = bucket_client.get_object(Bucket=settings.bucket_name, Key=s3_key)
+        response = bucket_client.get_object(
+            Bucket=settings.bucket_name, 
+            Key=f"exercise/{exercise_id}/results.json"
+        )
         content = response["Body"].read().decode("utf-8")
         data = json.loads(content)
+
+        processed_data = data.get("processed data", {})
+        notes = processed_data.get("notes")
         
-        # I assume that results.json contains a "notes" key or is a direct list.
-        if isinstance(data, dict) and "notes" in data:
-            return data["notes"]
-        elif isinstance(data, list):
-            return data
+        if isinstance(notes, list):
+            return notes
         else:
             raise ValueError("Invalid structure of the results.json file")
             
     except ClientError as e:
-        logging.error(f"S3 download error {s3_key}: {e}")
+        logging.error(f"S3 download error {exercise_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="The analysis file for this exercise was not found in S3."
