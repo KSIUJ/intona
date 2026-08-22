@@ -304,7 +304,7 @@ function Dashboard() {
 
                 <section className="progress-section">
                     <article className="progress-item">
-                        <div className="progress-circle progress-40">
+                        <div className="progress-circle progress" style={{ "--progress": `${stats.mastered_percentage * 3.6}deg` }}>
                             <div className="progress-circle-inner">
                                 <strong>{stats.mastered_percentage.toFixed(2)}%</strong>
                             </div>
@@ -314,7 +314,7 @@ function Dashboard() {
                     </article>
 
                     <article className="progress-item">
-                        <div className="progress-circle progress-70">
+                        <div className="progress-circle progress" style={{ "--progress": `${stats.average_score * 3.6}deg` }}>
                             <div className="progress-circle-inner">
                                 <strong>{stats.average_score.toFixed(2)}%</strong>
                             </div>
@@ -324,7 +324,7 @@ function Dashboard() {
                     </article>
 
                     <article className="progress-item">
-                        <div className="progress-circle progress-100">
+                        <div className="progress-circle progress" style={{ "--progress": `${stats.active_days_percentage * 3.6}deg` }}>
                             <div className="progress-circle-inner">
                                 <strong>{stats.active_days_percentage}%</strong>
                             </div>

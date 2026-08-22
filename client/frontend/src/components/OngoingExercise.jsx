@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from "react";
 import {useNavigate, useLocation} from "react-router-dom";
-import {useMutation} from "@tanstack/react-query";
+import {useMutation, useQueryClient} from "@tanstack/react-query";
 
 import useAudio from '../hooks/useAudio'
 
@@ -10,6 +10,7 @@ const ENDING_STATUS = {
     ENDED: 'Ended'
 };
 export default function OngoingExercise() {
+    const queryClient = useQueryClient()
     const navigate = useNavigate();
     const location_data = useLocation()
     const {state} = location_data
@@ -44,6 +45,7 @@ export default function OngoingExercise() {
         mutationFn: (variables) => communicateExerciseEnd(variables.log_id, variables.exercise_duration, variables.time_in_tune, variables.average_deviation, variables.exercise_end_status),
         onSuccess() {
             console.log("successfully ended exercise")
+            queryClient.invalidateQueries({queryKey: ["dashboard"]})
             navigate("/")
         },
         onError(error) {
