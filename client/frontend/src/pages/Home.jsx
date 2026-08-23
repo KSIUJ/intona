@@ -9,6 +9,8 @@ import Carousel from "../components/Carousel";
 import CarouselSkeleton from "../components/CarouselSkeleton.jsx";
 
 
+
+
 const Home = () => {
     const navigate = useNavigate()
     const queryClient = useQueryClient()

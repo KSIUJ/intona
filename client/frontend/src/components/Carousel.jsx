@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import "./Carousel.css";
-import {useRef} from "react";
+import {useEffect, useRef, useState} from "react";
 import {Link} from "react-router-dom";
 import Chip from '@mui/material/Chip';
 import Card from '@mui/material/Card';
@@ -11,24 +11,6 @@ import {useQuery} from "@tanstack/react-query";
 import {useWindowSize} from "@reactuses/core/useWindowSize";
 
 
-export let exercises = [
-    {id: 1, title: "G-major scale", slug: "g-major-scale", difficulty: "Easy", rating: "100%"},
-    {id: 2, title: "C-major scale", slug: "c-major-scale", difficulty: "Easy", rating: "100%"},
-    {id: 3, title: "F-major scale", slug: "f-major-scale", difficulty: "Easy", rating: "100%"},
-    {id: 4, title: "Intervals 2-3", slug: "intervals-2-3", difficulty: "Medium", rating: "90%"},
-    {id: 5, title: "Intervals 4-5", slug: "intervals-4-5", difficulty: "Medium", rating: "95%"},
-    {id: 6, title: "Intervals 6-7", slug: "intervals-6-7", difficulty: "Medium", rating: "97%"},
-    {id: 7, title: "Intervals 1-8", slug: "intervals-1-8", difficulty: "Hard", rating: "50%"},
-];
-export let songs = [
-    {id: 1, title: "Song 1", slug: "song-1", difficulty: "Easy", rating: "100%"},
-    {id: 2, title: "Song 2", slug: "song-2", difficulty: "Easy", rating: "100%"},
-    {id: 3, title: "Song 3", slug: "song-3", difficulty: "Easy", rating: "100%"},
-    {id: 4, title: "Song 4", slug: "song-4", difficulty: "Medium", rating: "90%"},
-    {id: 5, title: "Song 5", slug: "song-5", difficulty: "Medium", rating: "95%"},
-    {id: 6, title: "Song 6", slug: "song-6", difficulty: "Medium", rating: "97%"},
-    {id: 7, title: "Song 7", slug: "song-7", difficulty: "Hard", rating: "50%"},
-];
 const difficultyColors = {
     Easy: "success",
     Medium: "warning",
@@ -36,8 +18,54 @@ const difficultyColors = {
 };
 
 
+function FilterIcon() {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <circle cx="8" cy="6" r="2"/>
+            <line x1="3" y1="6" x2="6" y2="6"/>
+            <line x1="10" y1="6" x2="21" y2="6"/>
+
+            <circle cx="16" cy="12" r="2"/>
+            <line x1="3" y1="12" x2="14" y2="12"/>
+            <line x1="18" y1="12" x2="21" y2="12"/>
+
+            <circle cx="11" cy="18" r="2"/>
+            <line x1="3" y1="18" x2="9" y2="18"/>
+            <line x1="13" y1="18" x2="21" y2="18"/>
+        </svg>
+    );
+}
+
+function SearchIcon() {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+    );
+}
+
 const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type, clickable}) => {
     const {width, height} = useWindowSize();
+
 
     return (
         <Card className="carousel-card">
@@ -78,6 +106,34 @@ const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type, clic
 
 
 const Carousel = ({type, title}) => {
+
+    const [isOpen, setOpen] = useState(false)
+    const carouselRef = useRef(null);
+    const linkBase = "/exercises";
+    const [cacheArray, setCacheArray] = useState([])
+    const previousSettingsArray = useRef({
+        "name": "",
+        "difficulties": {"Easy": false, "Medium": false, "Hard": false},
+        "rating": [0, 100]
+    })
+    const [currentSettingsArray, setCurrentSettingsArray] = useState({
+        "name": "",
+        "difficulties": {"Easy": true, "Medium": true, "Hard": true},
+        "rating": [0, 100]
+    })
+    const [workingSettingsArray, setWorkingSettingsArray] = useState({
+        "name": "",
+        "difficulties": {"Easy": true, "Medium": true, "Hard": true},
+        "rating": [0, 100]
+    })
+
+    const {data: rows, isLoading, isError} = useQuery({
+        queryKey: ["type", type],
+        queryFn: () => fetchExercises(type),
+        staleTime: Infinity,
+        refetchOnWindowFocus: false
+    })
+
     const fetchExercises = async (type) => {
         const api_response = await fetch(`/api/exercises/list/${type}`)
         if (!api_response.ok) {
@@ -92,14 +148,7 @@ const Carousel = ({type, title}) => {
         return response_json
     }
 
-    const {data: rows, isLoading, isError} = useQuery({
-        queryKey: ["type", type],
-        queryFn: () => fetchExercises(type),
-        staleTime: Infinity,
-        refetchOnWindowFocus: false
-    })
 
-    const carouselRef = useRef(null);
     const scrollByAmount = (direction) => {
         if (!carouselRef.current) return;
         const firstCard = carouselRef.current.querySelector(".carousel-card");
@@ -112,7 +161,57 @@ const Carousel = ({type, title}) => {
             behavior: "smooth",
         });
     };
-    const linkBase = "/exercises";
+
+    const returnNewArray = (rows) => {
+        return rows.filter(row => {
+            console.log(row)
+            console.log(currentSettingsArray.difficulties[row.difficulty])
+            if (currentSettingsArray.difficulties[row.difficulty] !== true) {
+                return false;
+            }
+            console.log(`${row.rating}`)
+            if (row.rating > currentSettingsArray.rating[1] || row.rating < currentSettingsArray.rating[0]) {
+                return false;
+            }
+            console.log(row.exercise_name)
+            return row.exercise_name.startsWith(currentSettingsArray.name);
+        })
+    }
+
+    const isCategoryAdded = (prevDict, currDict) => {
+        return Object.entries(prevDict).filter(([key, value]) => {
+            if (!value) {
+                return currDict[key];
+            }
+            return false;
+        }).length;
+    }
+
+    useEffect(() => {
+        if (!rows) {
+            return;
+        }
+        console.log("test2")
+        console.log(!currentSettingsArray.name.startsWith(previousSettingsArray.current.name))
+        console.log(currentSettingsArray.rating[0] < previousSettingsArray.current.rating[0] || currentSettingsArray.rating[1] > previousSettingsArray.current.rating[1])
+        console.log(isCategoryAdded(previousSettingsArray.current.difficulties, currentSettingsArray.difficulties))
+        if ((!currentSettingsArray.name.startsWith(previousSettingsArray.current.name)) ||
+            (currentSettingsArray.rating[0] < previousSettingsArray.current.rating[0] || currentSettingsArray.rating[1] > previousSettingsArray.current.rating[1]) ||
+            (isCategoryAdded(previousSettingsArray.current.difficulties, currentSettingsArray.difficulties))) {
+            console.log("test3")
+            setCacheArray(returnNewArray(rows))
+
+
+        } else {
+            console.log("test4")
+            setCacheArray(prev => returnNewArray(prev))
+        }
+        previousSettingsArray.current = currentSettingsArray
+    }, [currentSettingsArray, rows]);
+
+    useEffect(() => {
+        console.log(workingSettingsArray)
+    }, [workingSettingsArray]);
 
     if (isError) {
         // to change for better error ui
@@ -120,6 +219,99 @@ const Carousel = ({type, title}) => {
     }
     return (
         <section className="carousel-section">
+            <header className={`carousel-header filter-icon filter-trigger-btn ${isOpen ? 'active' : ''}`}
+                    onClick={() => setOpen(prev => !prev)}>
+                <h2 className="carousel-title"><FilterIcon/></h2>
+            </header>
+            {isOpen && (
+                <div className="filter-menu" style={{
+                    position: 'absolute',
+                    right: 0,
+                    zIndex: 10
+                }}>
+
+                    <div className="search-wrapper">
+                        <SearchIcon/>
+                        <input type="text" placeholder="Search by name..." value={workingSettingsArray.name} onChange={(e) =>
+                            setWorkingSettingsArray((prev) => ({
+                                ...prev,
+                                name: e.target.value
+                            }))}/>
+                    </div>
+
+                    <div className="filter-group">
+                        <h3 className="section-title">Difficulty level</h3>
+                        <div className="row">
+                            <button
+                                className={`diff-btn btn-easy ${workingSettingsArray.difficulties["Easy"] ? "active" : ""}`}
+                                onClick={() =>
+                                    setWorkingSettingsArray((prev) => ({
+                                        ...prev,
+                                        difficulties: {
+                                            "Easy": !prev.difficulties["Easy"],
+                                            "Medium": prev.difficulties["Medium"],
+                                            "Hard": prev.difficulties["Hard"]
+                                        }
+                                    }))}>EASY
+                            </button>
+                            <button
+                                className={`diff-btn btn-med ${workingSettingsArray.difficulties["Medium"] ? "active" : ""}`}
+                                onClick={() =>
+                                    setWorkingSettingsArray((prev) => ({
+                                        ...prev,
+                                        difficulties: {
+                                            "Easy": prev.difficulties["Easy"],
+                                            "Medium": !prev.difficulties["Medium"],
+                                            "Hard": prev.difficulties["Hard"]
+                                        }
+                                    }))}>MED
+                            </button>
+                            <button
+                                className={`diff-btn btn-hard ${workingSettingsArray.difficulties["Hard"] ? "active" : ""}`}
+                                onClick={() =>
+                                    setWorkingSettingsArray((prev) => ({
+                                        ...prev,
+                                        difficulties: {
+                                            "Easy": prev.difficulties["Easy"],
+                                            "Medium": prev.difficulties["Medium"],
+                                            "Hard": !prev.difficulties["Hard"]
+                                        }
+                                    }))}>HARD
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="filter-group">
+                        <h3 className="section-title">Rating (%)</h3>
+                        <div className="row">
+                            <input type="number" className="rating-input" placeholder="From" value={workingSettingsArray.rating[0]}
+                                   onChange={(e) =>
+                                       setWorkingSettingsArray((prev) => ({
+                                           ...prev,
+                                           rating: [e.target.value !== '' ? parseInt(e.target.value) > 100 ? 100 : parseInt(e.target.value) : 0, prev.rating[1]]
+                                       }))}/>
+                            <span className="rating-separator">—</span>
+                            <input type="number" className="rating-input" placeholder="To" value={workingSettingsArray.rating[1]}
+                                   onChange={(e) =>
+                                       setWorkingSettingsArray((prev) => ({
+                                           ...prev,
+                                           rating: [prev.rating[0], e.target.value !== '' ? parseInt(e.target.value) > 100 ? 100 : parseInt(e.target.value) : 0]
+                                       }))}/>
+                        </div>
+                    </div>
+
+                    <div className="action-buttons">
+                        <button className="action-btn btn-cancel" onClick={() => {
+                            setWorkingSettingsArray(currentSettingsArray)
+                            setOpen(false)}}>Cancel</button>
+                        <button className="action-btn btn-ok" onClick={() => {
+                            setCurrentSettingsArray(workingSettingsArray)
+                            setOpen(false)
+                        }}>OK</button>
+                    </div>
+
+                </div>
+            )}
             <header className="carousel-header">
                 <h2 className="carousel-title">{type}s</h2>
             </header>
@@ -131,7 +323,7 @@ const Carousel = ({type, title}) => {
                     {isLoading && <ExerciseCard
                         clickable={false}
                     />}
-                    {rows?.map((row) => (
+                    {cacheArray?.map((row) => (
                         <ExerciseCard
                             key={row.id}
                             id={row.id}
