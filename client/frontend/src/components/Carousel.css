@@ -3,7 +3,7 @@
 
 .delete-icon {
     justify-self: start !important;
-    width: 60px !important;
+    width: 50px !important;
     margin-left: 20px !important;
 
     height: 40px;
@@ -20,6 +20,10 @@
     box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
 
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    @media (width > 600px) {
+        width: 60px !important;
+    }
 }
 
 .delete-icon:hover {
@@ -30,8 +34,8 @@
 
 .delete-icon svg {
     transition: transform 0.3s ease;
-    width: 32px;
-    height: 32px;
+    width: 25px;
+    height: 25px;
 }
 
 .delete-icon:hover svg {
@@ -348,7 +352,10 @@
     .filter-icon {
         justify-self: end;
         margin-right: 20px;
-        width: 60px;
+        width: 50px;
+        @media (width > 600px) {
+            width: 60px !important;
+        }
     }
 
     .carousel-body {
