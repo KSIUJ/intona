@@ -24,15 +24,31 @@ function AddButton() {
     );
 }
 
+const generateTemplate = (type) => {
+        return {
+            "id": crypto.randomUUID(),
+            "type": type,
+            "exercise_name": "",
+            "filter": {"name": "", "difficulties": {"Easy": true, "Medium": true, "Hard": true}, "rating": [0, 100]}
+        }
+    }
+
 const Home = () => {
+
     const navigate = useNavigate()
     const queryClient = useQueryClient()
     const [open, setOpen] = useState(false);
     const [openDialog, setOpenDialog] = useState(false);
     const [carouselAddingSettings, setCarouselAddingSettings] = useState(() => {
-        const array = JSON.parse(localStorage.getItem("carousel_settings"))
-        return array ? array : {"selected_carousels": []}
-    })
+            const array = JSON.parse(localStorage.getItem("carousel_settings"))
+            return array ? array : {
+                "selected_carousels": [
+                    generateTemplate("Song"), generateTemplate("Exercise")
+                ]
+            }
+        }
+    )
+
 
 
     const fetchExerciseTypes = async () => {
@@ -139,7 +155,7 @@ const Home = () => {
             </header>
 
             <main>
-                {isLoading && Array.from(Array(carouselAddingSettings.length)).map((_, index) => {
+                {(isLoading) && Array.from(Array(carouselAddingSettings.selected_carousels.length)).map((_, index) => {
                     return <section>
                         <CarouselSkeleton/>
                     </section>
