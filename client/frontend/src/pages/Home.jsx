@@ -6,7 +6,6 @@ import Avatar from "@mui/material/Avatar";
 
 import {checkIfLoggedIn} from "../utils/utils.js";
 import Carousel from "../components/Carousel";
-import CarouselSkeleton from "../components/CarouselSkeleton.jsx";
 
 
 const Home = () => {
@@ -14,20 +13,7 @@ const Home = () => {
     const queryClient = useQueryClient()
     const [open, setOpen] = useState(false);
 
-    const fetchExerciseTypes = async () => {
-        const api_response = await fetch(`/api/public/exercises/types`)
-        if (!api_response.ok) {
-            const errorText = await response.text();
-            console.error("error message:", errorText);
-
-            const api_response_error = new Error(errorText);
-            api_response_error.status = response.status;
-            throw api_response_error;
-        }
-        const response_json = await api_response.json()
-        console.log(response_json)
-        return response_json
-    }
+    
 
     const Logout = async () => {
         const response = await fetch(`/api/auth/logout`, {
@@ -42,14 +28,12 @@ const Home = () => {
         }
     }
 
-    const {data: exercise_types} = useQuery({
-        queryKey: ["exercise_types"],
-        queryFn: fetchExerciseTypes,
-        staleTime: Infinity,
-        refetchOnWindowFocus: false
-    })
+    const exerciseTypes = [
+    { type: "exercises" },
+    { type: "songs" },
+];
 
-    const {isSuccess, isLoading, isError} = useQuery({
+    const {isSuccess, isError} = useQuery({
         queryKey: ["logged_check"],
         queryFn: checkIfLoggedIn,
         retry: false,
@@ -116,17 +100,13 @@ const Home = () => {
             </header>
 
             <main>
-                {isLoading && Array.from(Array(2)).map((_, index) => {
-                    return <section>
-                        <CarouselSkeleton/>
-                    </section>
-                })}
+                
 
-                {!isLoading && exercise_types?.map((exercise_type) => {
-                    return <section>
-                        <Carousel type={exercise_type.type}/>
-                    </section>
-                })}
+                {exerciseTypes.map((exercise_type) => {
+    return <section key={exercise_type.type}>
+        <Carousel type={exercise_type.type}/>
+    </section>
+})}
             </main>
         </div>
     );

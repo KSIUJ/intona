@@ -20,8 +20,11 @@ export let exercises = [
     {id: 7, title: "Intervals 1-8", slug: "intervals-1-8", difficulty: "Hard", rating: "50%"},
 ];
 export let songs = [
-    {id: 1, title: "Song 1", slug: "song-1", difficulty: "Easy", rating: "100%"},
-    {id: 2, title: "Song 2", slug: "song-2", difficulty: "Easy", rating: "100%"},
+    { id: 1, title: "Iris", slug: "Iris", difficulty: "Easy", rating: "100%",
+  musicXmlUrl: "/songs/Iris-voice.musicxml", audioUrl: "/songs/Iris-piano.mp3" },
+    {id: 2, title: "All of me", slug: "All of me", difficulty: "Easy", rating: "100%",
+        musicXmlUrl: "/songs/All_Of_Me.musicxml", audioUrl: "/songs/All_Of_Me.mp3"
+    },
     {id: 3, title: "Song 3", slug: "song-3", difficulty: "Easy", rating: "100%"},
     {id: 4, title: "Song 4", slug: "song-4", difficulty: "Medium", rating: "90%"},
     {id: 5, title: "Song 5", slug: "song-5", difficulty: "Medium", rating: "95%"},
@@ -72,28 +75,35 @@ const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type, clic
 };
 
 
-const Carousel = ({type, title}) => {
+const Carousel = ({type}) => {
+    const source = type === "songs" ? songs : exercises;
 
-    const fetchExercises = async (type) => {
-        const api_response = await fetch(`/api/exercises/list/${type}`)
+    const fetchRatings = async (type) => {
+        const api_response = await fetch(`/api/exercises/list/${type}`);
         if (!api_response.ok) {
-            const errorText = await api_response.text();
-            console.error("error message:", errorText);
-
-            const api_response_error = new Error(errorText);
-            api_response_error.status = api_response.status;
-            throw api_response_error;
+            throw new Error("Nie udało się pobrać ocen");
         }
-        const response_json = await api_response.json()
-        return response_json
-    }
+        return api_response.json();
+    };
 
-    const {data: rows, isLoading, isError} = useQuery({
-        queryKey: ["type", type],
-        queryFn: () => fetchExercises(type),
+    const { data: ratingsData } = useQuery({
+        queryKey: ["ratings", type],
+        queryFn: () => fetchRatings(type),
         staleTime: Infinity,
-        refetchOnWindowFocus: false
-    })
+        refetchOnWindowFocus: false,
+        retry: false,
+    });
+
+    const ratingsById = {};
+    if (Array.isArray(ratingsData)) {
+        for (const entry of ratingsData) {
+            ratingsById[entry.id] = entry.rating;
+        }
+    }
+    const rows = source.map((item) => ({
+        ...item,
+        rating: ratingsById[item.id] ?? "0%",
+    }));
 
     const carouselRef = useRef(null);
     const scrollByAmount = (direction) => {
@@ -110,10 +120,6 @@ const Carousel = ({type, title}) => {
     };
     const linkBase = "/exercises";
 
-    if (isError) {
-        // to change for better error ui
-        return <>error</>
-    }
     return (
         <section className="carousel-section">
             <header className="carousel-header">
@@ -124,22 +130,9 @@ const Carousel = ({type, title}) => {
                     ‹
                 </button>
                 <div className="full-width-carousel" ref={carouselRef}>
-                    {isLoading && <ExerciseCard
-                        clickable={false}
-                    />}
-                    {rows?.map((row) => (
-                        <ExerciseCard
-                            key={row.id}
-                            id={row.id}
-                            title={row.exercise_name}
-                            slug={row.slug}
-                            difficulty={row.difficulty}
-                            rating={`${row.rating}%`}
-                            linkBase={linkBase}
-                            type={type}
-                            clickable={true}
-                        />
-                    ))}
+                    {rows.map((row) => (
+                    <ExerciseCard key={row.id} {...row} linkBase={linkBase} type={type} clickable />
+                ))}
                 </div>
                 <button className="carousel-arrow carousel-arrow-right" onClick={() => scrollByAmount(1)}>
                     ›
