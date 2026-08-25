@@ -8,7 +8,7 @@ import CardContent from '@mui/material/CardContent';
 import CardActionArea from '@mui/material/CardActionArea';
 import Typography from '@mui/material/Typography';
 import {useQuery} from "@tanstack/react-query";
-import {useWindowSize} from "@reactuses/core/useWindowSize";
+import {useWindowSize} from "@reactuses/core";
 
 
 const difficultyColors = {
@@ -63,9 +63,25 @@ function SearchIcon() {
     );
 }
 
-const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type, clickable}) => {
-    const {width, height} = useWindowSize();
+function TrashIcon() {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <path
+                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>
+        </svg>
+    );
+}
 
+const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type, clickable}) => {
+    const {width} = useWindowSize()
 
     return (
         <Card className="carousel-card">
@@ -105,31 +121,36 @@ const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type, clic
 };
 
 
-const Carousel = ({type, title}) => {
-
+const Carousel = ({info, setCarouselAddingSettings}) => {
     const [isOpen, setOpen] = useState(false)
-    const carouselRef = useRef(null);
     const linkBase = "/exercises";
     const [cacheArray, setCacheArray] = useState([])
     const previousSettingsArray = useRef({
-        "name": "",
+        "name": crypto.randomUUID(),
         "difficulties": {"Easy": false, "Medium": false, "Hard": false},
         "rating": [0, 100]
     })
-    const [currentSettingsArray, setCurrentSettingsArray] = useState({
-        "name": "",
-        "difficulties": {"Easy": true, "Medium": true, "Hard": true},
-        "rating": [0, 100]
+    const [currentSettingsArray, setCurrentSettingsArray] = useState(() => {
+        return info.filter ? info.filter : {
+            "name": "",
+            "difficulties": {"Easy": true, "Medium": true, "Hard": true},
+            "rating": [0, 100]
+        }
     })
-    const [workingSettingsArray, setWorkingSettingsArray] = useState({
-        "name": "",
-        "difficulties": {"Easy": true, "Medium": true, "Hard": true},
-        "rating": [0, 100]
+    const [workingSettingsArray, setWorkingSettingsArray] = useState(() => {
+        return info.filter ? info.filter : {
+            "name": "",
+            "difficulties": {"Easy": true, "Medium": true, "Hard": true},
+            "rating": [0, 100]
+        }
     })
+    const [exerciseName, setExerciseName] = useState(info.exercise_name.length !== 0 ? info.exercise_name : `${info.type}s`)
+    const carouselRef = useRef(null);
+    const timerIdRed = useRef(0)
 
     const {data: rows, isLoading, isError} = useQuery({
-        queryKey: ["type", type],
-        queryFn: () => fetchExercises(type),
+        queryKey: ["type", info.type],
+        queryFn: () => fetchExercises(info.type),
         staleTime: Infinity,
         refetchOnWindowFocus: false
     })
@@ -164,16 +185,12 @@ const Carousel = ({type, title}) => {
 
     const returnNewArray = (rows) => {
         return rows.filter(row => {
-            console.log(row)
-            console.log(currentSettingsArray.difficulties[row.difficulty])
             if (currentSettingsArray.difficulties[row.difficulty] !== true) {
                 return false;
             }
-            console.log(`${row.rating}`)
             if (row.rating > currentSettingsArray.rating[1] || row.rating < currentSettingsArray.rating[0]) {
                 return false;
             }
-            console.log(row.exercise_name)
             return row.exercise_name.startsWith(currentSettingsArray.name);
         })
     }
@@ -191,27 +208,18 @@ const Carousel = ({type, title}) => {
         if (!rows) {
             return;
         }
-        console.log("test2")
-        console.log(!currentSettingsArray.name.startsWith(previousSettingsArray.current.name))
-        console.log(currentSettingsArray.rating[0] < previousSettingsArray.current.rating[0] || currentSettingsArray.rating[1] > previousSettingsArray.current.rating[1])
-        console.log(isCategoryAdded(previousSettingsArray.current.difficulties, currentSettingsArray.difficulties))
         if ((!currentSettingsArray.name.startsWith(previousSettingsArray.current.name)) ||
             (currentSettingsArray.rating[0] < previousSettingsArray.current.rating[0] || currentSettingsArray.rating[1] > previousSettingsArray.current.rating[1]) ||
             (isCategoryAdded(previousSettingsArray.current.difficulties, currentSettingsArray.difficulties))) {
-            console.log("test3")
             setCacheArray(returnNewArray(rows))
 
 
         } else {
-            console.log("test4")
             setCacheArray(prev => returnNewArray(prev))
         }
         previousSettingsArray.current = currentSettingsArray
     }, [currentSettingsArray, rows]);
 
-    useEffect(() => {
-        console.log(workingSettingsArray)
-    }, [workingSettingsArray]);
 
     if (isError) {
         // to change for better error ui
@@ -232,11 +240,12 @@ const Carousel = ({type, title}) => {
 
                     <div className="search-wrapper">
                         <SearchIcon/>
-                        <input type="text" placeholder="Search by name..." value={workingSettingsArray.name} onChange={(e) =>
-                            setWorkingSettingsArray((prev) => ({
-                                ...prev,
-                                name: e.target.value
-                            }))}/>
+                        <input type="text" placeholder="Search by name..." value={workingSettingsArray.name}
+                               onChange={(e) =>
+                                   setWorkingSettingsArray((prev) => ({
+                                       ...prev,
+                                       name: e.target.value
+                                   }))}/>
                     </div>
 
                     <div className="filter-group">
@@ -284,14 +293,16 @@ const Carousel = ({type, title}) => {
                     <div className="filter-group">
                         <h3 className="section-title">Rating (%)</h3>
                         <div className="row">
-                            <input type="number" className="rating-input" placeholder="From" value={workingSettingsArray.rating[0]}
+                            <input type="number" className="rating-input" placeholder="From"
+                                   value={workingSettingsArray.rating[0]}
                                    onChange={(e) =>
                                        setWorkingSettingsArray((prev) => ({
                                            ...prev,
                                            rating: [e.target.value !== '' ? parseInt(e.target.value) > 100 ? 100 : parseInt(e.target.value) : 0, prev.rating[1]]
                                        }))}/>
                             <span className="rating-separator">—</span>
-                            <input type="number" className="rating-input" placeholder="To" value={workingSettingsArray.rating[1]}
+                            <input type="number" className="rating-input" placeholder="To"
+                                   value={workingSettingsArray.rating[1]}
                                    onChange={(e) =>
                                        setWorkingSettingsArray((prev) => ({
                                            ...prev,
@@ -303,17 +314,75 @@ const Carousel = ({type, title}) => {
                     <div className="action-buttons">
                         <button className="action-btn btn-cancel" onClick={() => {
                             setWorkingSettingsArray(currentSettingsArray)
-                            setOpen(false)}}>Cancel</button>
+                            setOpen(false)
+                        }}>Cancel
+                        </button>
                         <button className="action-btn btn-ok" onClick={() => {
+                            setCarouselAddingSettings(prev => ({
+                                ...prev,
+                                selected_carousels: prev.selected_carousels.map(carousel => {
+                                    if (carousel.id === info.id) {
+                                        return {
+                                            ...carousel,
+                                            filter: workingSettingsArray
+                                        }
+                                    }
+                                    return carousel
+                                })
+                            }))
                             setCurrentSettingsArray(workingSettingsArray)
                             setOpen(false)
-                        }}>OK</button>
+                        }}>OK
+                        </button>
                     </div>
 
                 </div>
             )}
+
+            <button className={`carousel-header delete-icon`} onClick={() => {
+                setCarouselAddingSettings(prev => ({
+                    ...prev,
+                    selected_carousels: prev.selected_carousels.filter((carousel) => {
+                        return carousel.id !== info.id
+                    })
+                }))
+            }}>
+                <h2 className="carousel-title"><TrashIcon/></h2>
+            </button>
+
             <header className="carousel-header">
-                <h2 className="carousel-title">{type}s</h2>
+                <input
+                    type="text"
+                    className="carousel-title"
+                    defaultValue={exerciseName}
+                    value={exerciseName}
+                    onChange={(e) => {
+                        const value = e.target.value
+                        setExerciseName(value)
+
+                        if (timerIdRed.current !== 0) {
+                            clearTimeout(timerIdRed.current)
+                        }
+
+                        timerIdRed.current = setTimeout(() => {
+                            setCarouselAddingSettings(prev => ({
+                                ...prev,
+                                selected_carousels: prev.selected_carousels.map((carousel) => {
+                                    if (carousel.id === info.id) {
+                                        return {
+                                            ...carousel,
+                                            exercise_name: value
+                                        }
+                                    }
+                                    return carousel
+                                })
+                            }))
+                            clearTimeout(timerIdRed.current)
+                        }, 1000)
+
+
+                    }}
+                />
             </header>
             <div className="carousel-body">
                 <button className="carousel-arrow carousel-arrow-left" onClick={() => scrollByAmount(-1)}>
@@ -332,7 +401,7 @@ const Carousel = ({type, title}) => {
                             difficulty={row.difficulty}
                             rating={`${row.rating}%`}
                             linkBase={linkBase}
-                            type={type}
+                            type={info.type}
                             clickable={true}
                         />
                     ))}

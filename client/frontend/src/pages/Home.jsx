@@ -1,4 +1,4 @@
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {Link, useNavigate} from "react-router-dom";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 
@@ -7,14 +7,33 @@ import Avatar from "@mui/material/Avatar";
 import {checkIfLoggedIn} from "../utils/utils.js";
 import Carousel from "../components/Carousel";
 import CarouselSkeleton from "../components/CarouselSkeleton.jsx";
+import FormDialog from "../components/FormDialog.jsx";
 
 
-
+function AddButton() {
+    return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+                d="M12 5V19M5 12H19"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
 
 const Home = () => {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
     const [open, setOpen] = useState(false);
+    const [openDialog, setOpenDialog] = useState(false);
+    const [carouselAddingSettings, setCarouselAddingSettings] = useState(() => {
+        const array = JSON.parse(localStorage.getItem("carousel_settings"))
+        return array ? array : {"selected_carousels": []}
+    })
+
 
     const fetchExerciseTypes = async () => {
         const api_response = await fetch(`/api/public/exercises/types`)
@@ -27,7 +46,6 @@ const Home = () => {
             throw api_response_error;
         }
         const response_json = await api_response.json()
-        console.log(response_json)
         return response_json
     }
 
@@ -40,7 +58,6 @@ const Home = () => {
             const errorText = await response.text();
             console.error("error message:", errorText);
 
-            console.log(errorText)
         }
     }
 
@@ -73,6 +90,10 @@ const Home = () => {
         }
     })
 
+    useEffect(() => {
+        console.log(JSON.stringify(carouselAddingSettings))
+        localStorage.setItem("carousel_settings", JSON.stringify(carouselAddingSettings))
+    }, [carouselAddingSettings])
 
     return (
         <div className="app">
@@ -118,17 +139,25 @@ const Home = () => {
             </header>
 
             <main>
-                {isLoading && Array.from(Array(2)).map((_, index) => {
+                {isLoading && Array.from(Array(carouselAddingSettings.length)).map((_, index) => {
                     return <section>
                         <CarouselSkeleton/>
                     </section>
                 })}
 
-                {!isLoading && exercise_types?.map((exercise_type) => {
-                    return <section>
-                        <Carousel type={exercise_type.type}/>
+                {(!isLoading || isSuccess) && carouselAddingSettings.selected_carousels?.map((exercise_info, index) => {
+                    return <section key={exercise_info.id}>
+                        <Carousel info={exercise_info} setCarouselAddingSettings={setCarouselAddingSettings}/>
                     </section>
                 })}
+                <button className="add-button" onClick={(e) => {
+                    e.currentTarget.blur();
+                    setOpenDialog(true);
+                }}>
+                    <AddButton/>
+                </button>
+                <FormDialog open={openDialog} setOpen={setOpenDialog} setSettingsObject={setCarouselAddingSettings}
+                            typesAvailable={exercise_types}/>
             </main>
         </div>
     );
