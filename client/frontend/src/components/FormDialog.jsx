@@ -4,7 +4,7 @@ import {
 } from '@mui/material';
 import {useEffect} from "react";
 
-export default function FormDialog({setSettingsObject, typesAvailable, open, setOpen}) {
+export default function FormDialog({postCarouselSettingsMutate, typesAvailable, open, setOpen}) {
 
     const handleClose = () => {
         setOpen(false);
@@ -21,23 +21,11 @@ export default function FormDialog({setSettingsObject, typesAvailable, open, set
             difficulties: {"Easy": true, "Medium": true, "Hard": true},
             rating: [0, 100]
         }
-        setSettingsObject(prev => ({
-            ...prev,
-            selected_carousels: [
-                ...prev.selected_carousels,
-                {
-                    ...settingsObject,
-                    id: crypto.randomUUID()
-                }
-            ],
-
-        }))
+        settingsObject.id = crypto.randomUUID()
+        postCarouselSettingsMutate(settingsObject)
         handleClose()
     };
 
-    useEffect(() => {
-        console.log(typesAvailable)
-    }, []);
 
     return (<Dialog
         open={open}

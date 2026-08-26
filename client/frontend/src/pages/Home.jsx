@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {useState} from "react";
 import {Link, useNavigate} from "react-router-dom";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 
@@ -25,158 +25,293 @@ function AddButton() {
 }
 
 const generateTemplate = (type) => {
-        return {
-            "id": crypto.randomUUID(),
-            "type": type,
-            "exercise_name": "",
-            "filter": {"name": "", "difficulties": {"Easy": true, "Medium": true, "Hard": true}, "rating": [0, 100]}
-        }
+    return {
+        "id": crypto.randomUUID(),
+        "type": type,
+        "exercise_name": "",
+        "filter": {"name": "", "difficulties": {"Easy": true, "Medium": true, "Hard": true}, "rating": [0, 100]}
     }
+}
 
 const Home = () => {
 
-    const navigate = useNavigate()
-    const queryClient = useQueryClient()
-    const [open, setOpen] = useState(false);
-    const [openDialog, setOpenDialog] = useState(false);
-    const [carouselAddingSettings, setCarouselAddingSettings] = useState(() => {
-            const array = JSON.parse(localStorage.getItem("carousel_settings"))
-            return array ? array : {
-                "selected_carousels": [
-                    generateTemplate("Song"), generateTemplate("Exercise")
-                ]
+        const navigate = useNavigate()
+        const queryClient = useQueryClient()
+        const [open, setOpen] = useState(false);
+        const [openDialog, setOpenDialog] = useState(false);
+
+        const fetchCarouselSettings = async () => {
+            const api_response = await fetch("/api/settings/me/carousel_settings",
+                {
+                    credentials: 'include'
+                })
+            if (!api_response.ok) {
+                const errorText = await api_response.text();
+                console.error("error message:", errorText);
+
+                const json_data = JSON.parse(localStorage.getItem("carousel_settings"))
+                const array = json_data ? json_data : {
+                    "selected_carousels": [
+                        generateTemplate("Song"), generateTemplate("Exercise")
+                    ]
+                }
+                localStorage.setItem("carousel_settings", JSON.stringify(array))
+                return array
+            }
+            const api_response_json = await api_response.json()
+            return api_response_json
+        }
+
+        const addCarouselSetting = async (data) => {
+            console.log(`stringified data: ${JSON.stringify(data)}`)
+            const api_response = await fetch("/api/settings/me/carousel_settings", {
+                method: "POST",
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            if (!api_response.ok) {
+                const errorText = await api_response.text();
+                console.error("error message:", errorText);
+
+                throw new Error(`${errorText}`)
+            }
+            const api_response_json = await api_response.json()
+            return api_response_json
+        }
+
+        const updateCarouselSetting = async (data) => {
+            const api_response = await fetch("/api/settings/me/carousel_settings", {
+                method: "PUT",
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            if (!api_response.ok) {
+                const errorText = await api_response.text();
+                console.error("error message:", errorText);
+
+                throw new Error(`${errorText}`)
+            }
+            const api_response_json = await api_response.json()
+            return api_response_json
+        }
+
+        const deleteCarouselSettings = async (data) => {
+            const api_response = await fetch("/api/settings/me/carousel_settings", {
+                method: "DELETE",
+                credentials: 'include',
+                body: data
+            })
+            if (!api_response.ok) {
+                const errorText = await api_response.text();
+                console.error("error message:", errorText);
+
+                throw new Error(`${errorText}`)
+            }
+            const api_response_json = await api_response.json()
+            return api_response_json
+        }
+
+
+        const fetchExerciseTypes = async () => {
+            const api_response = await fetch(`/api/public/exercises/types`)
+            if (!api_response.ok) {
+                const errorText = await response.text();
+                console.error("error message:", errorText);
+
+                const api_response_error = new Error(errorText);
+                api_response_error.status = response.status;
+                throw api_response_error;
+            }
+            const response_json = await api_response.json()
+            return response_json
+        }
+
+        const Logout = async () => {
+            const response = await fetch(`/api/auth/logout`, {
+                credentials: 'include',
+                method: 'POST'
+            })
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("error message:", errorText);
+
             }
         }
-    )
 
 
-
-    const fetchExerciseTypes = async () => {
-        const api_response = await fetch(`/api/public/exercises/types`)
-        if (!api_response.ok) {
-            const errorText = await response.text();
-            console.error("error message:", errorText);
-
-            const api_response_error = new Error(errorText);
-            api_response_error.status = response.status;
-            throw api_response_error;
-        }
-        const response_json = await api_response.json()
-        return response_json
-    }
-
-    const Logout = async () => {
-        const response = await fetch(`/api/auth/logout`, {
-            credentials: 'include',
-            method: 'POST'
+        const {data: carouselSettings} = useQuery({
+            queryKey: ["settings", "carousel", "me"],
+            queryFn: fetchCarouselSettings,
+            staleTime: Infinity,
+            refetchOnWindowFocus: false
         })
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("error message:", errorText);
 
-        }
-    }
+        const {data: exercise_types} = useQuery({
+            queryKey: ["exercise_types"],
+            queryFn: fetchExerciseTypes,
+            staleTime: Infinity,
+            refetchOnWindowFocus: false
+        })
 
-    const {data: exercise_types} = useQuery({
-        queryKey: ["exercise_types"],
-        queryFn: fetchExerciseTypes,
-        staleTime: Infinity,
-        refetchOnWindowFocus: false
-    })
+        const {isSuccess, isLoading, isError} = useQuery({
+            queryKey: ["logged_check"],
+            queryFn: checkIfLoggedIn,
+            retry: false,
+            refetchOnWindowFocus: (query) => {
+                return query.state.status !== 'error';
+            }
+        })
 
-    const {isSuccess, isLoading, isError} = useQuery({
-        queryKey: ["logged_check"],
-        queryFn: checkIfLoggedIn,
-        retry: false,
-        refetchOnWindowFocus: (query) => {
-            return query.state.status !== 'error';
-        }
-    })
+        const mutateLogout = useMutation({
+            mutationFn: Logout,
+            onSuccess() {
+                console.log("successfully logged out")
+                queryClient.invalidateQueries({queryKey: ["logged_check"]})
+                queryClient.invalidateQueries({queryKey: ["settings", "carousel", "me"]})
+                navigate("/login")
+            },
+            onError() {
+                console.log("there was an error in logging out")
+                navigate("/login")
+            }
+        })
 
-    const {mutate} = useMutation({
-        mutationFn: Logout,
-        onSuccess() {
-            console.log("successfully logged out")
-            queryClient.invalidateQueries({queryKey: ["logged_check"]})
-            navigate("/login")
-        },
-        onError() {
-            console.log("there was an error in logging out")
-            navigate("/login")
-        }
-    })
+        const postCarouselSettingsMutate = useMutation({
+            mutationFn: async (data) => addCarouselSetting(data),
+            onSuccess(data) {
+                console.log(`post success ${data}`)
+                queryClient.setQueryData(["settings", "carousel", "me"], data)
 
-    useEffect(() => {
-        console.log(JSON.stringify(carouselAddingSettings))
-        localStorage.setItem("carousel_settings", JSON.stringify(carouselAddingSettings))
-    }, [carouselAddingSettings])
+            },
+            onError(error, variables) {
+                console.log(`variables post ${JSON.stringify(variables)}`)
+                console.log(`post error ${error.toString()}`)
+                let array = JSON.parse(localStorage.getItem("carousel_settings"))
+                array.selected_carousels.push(variables)
+                queryClient.setQueryData(["settings", "carousel", "me"], array)
+                localStorage.setItem("carousel_settings", JSON.stringify(array))
+            }
+        })
 
-    return (
-        <div className="app">
-            <header className="site-header-home">
-                <Link to={"/"} className="brand">
-                    <span className="brand-icon"></span>
-                    <span>INTONA</span>
-                </Link>
+        const updateCarouselSettingsMutate = useMutation({
+            mutationFn: async (data) => updateCarouselSetting(data),
+            onSuccess(data) {
+                console.log(`put success ${data}`)
+                queryClient.setQueryData(["settings", "carousel", "me"], data)
+            },
+            onError(error, variables) {
+                console.log(`variables update ${variables}`)
+                console.log(`update error ${error.toString()}`)
+                let array = JSON.parse(localStorage.getItem("carousel_settings"))
+                array.selected_carousels = array.selected_carousels.map((setting) => {
+                    if (setting.id === variables.id) {
+                        setting = variables
+                    }
+                    return setting
+                })
+                localStorage.setItem("carousel_settings", JSON.stringify(array))
 
-                {isSuccess &&
-                    <div className="avatar-menu">
-                        <button
-                            className="avatar-toggle"
-                            type="button"
-                            onClick={() => setOpen((prev) => !prev)}
-                        >
-                            <Avatar alt="User avatar" src="avatar.png" className="avatar"/>
-                        </button>
+            }
+        })
 
-                        {open && (
-                            <div className="avatar-dropdown">
+        const deleteCarouselSettingsMutate = useMutation({
+            mutationFn: async (data) => deleteCarouselSettings(data),
+            onSuccess(data) {
+                console.log(`delete success ${data}`)
+                queryClient.setQueryData(["settings", "carousel", "me"], data)
+            },
+            onError(error, variables) {
+                console.log(`variables delete ${variables}`)
+                console.log(`delete error ${error.toString()}`)
+                let array = JSON.parse(localStorage.getItem("carousel_settings"))
+                array.selected_carousels = array.selected_carousels.filter((setting) => {
+                    return setting.id !== variables
+                })
+                queryClient.setQueryData(["settings", "carousel", "me"], array)
+                localStorage.setItem("carousel_settings", JSON.stringify(array))
 
-                                <>
-                                    <button type="button">
-                                        <Link to="/dashboard">Dashboard</Link>
-                                    </button>
+            }
+        })
 
-                                    <button type="button" onClick={mutate}>
-                                        Sign out
-                                    </button>
-                                </>
-                            </div>)}
+
+        return (
+            <div className="app">
+                <header className="site-header-home">
+                    <Link to={"/"} className="brand">
+                        <span className="brand-icon"></span>
+                        <span>INTONA</span>
+                    </Link>
+
+                    {isSuccess &&
+                        <div className="avatar-menu">
+                            <button
+                                className="avatar-toggle"
+                                type="button"
+                                onClick={() => setOpen((prev) => !prev)}
+                            >
+                                <Avatar alt="User avatar" src="avatar.png" className="avatar"/>
+                            </button>
+
+                            {open && (
+                                <div className="avatar-dropdown">
+
+                                    <>
+                                        <button type="button">
+                                            <Link to="/dashboard">Dashboard</Link>
+                                        </button>
+
+                                        <button type="button" onClick={() => {
+                                            mutateLogout.mutate()
+                                        }}>
+                                            Sign out
+                                        </button>
+                                    </>
+                                </div>)}
+                        </div>}
+                    {isError && <div className="auth-nav">
+                        <Link to={"/login"} className="login-link" type="button">
+                            Log in
+                        </Link>
+
+                        <Link to={"/sign_up"} className="signup-button" type="button">
+                            Sign up
+                        </Link>
                     </div>}
-                {isError && <div className="auth-nav">
-                    <Link to={"/login"} className="login-link" type="button">
-                        Log in
-                    </Link>
+                </header>
 
-                    <Link to={"/sign_up"} className="signup-button" type="button">
-                        Sign up
-                    </Link>
-                </div>}
-            </header>
+                <main>
+                    {(isLoading) && Array.from(Array(carouselSettings?.selected_carousels.length)).map((_, index) => {
+                        return <section>
+                            <CarouselSkeleton/>
+                        </section>
+                    })}
 
-            <main>
-                {(isLoading) && Array.from(Array(carouselAddingSettings.selected_carousels.length)).map((_, index) => {
-                    return <section>
-                        <CarouselSkeleton/>
-                    </section>
-                })}
-
-                {(!isLoading || isSuccess) && carouselAddingSettings.selected_carousels?.map((exercise_info, index) => {
-                    return <section key={exercise_info.id}>
-                        <Carousel info={exercise_info} setCarouselAddingSettings={setCarouselAddingSettings}/>
-                    </section>
-                })}
-                <button className="add-button" onClick={(e) => {
-                    e.currentTarget.blur();
-                    setOpenDialog(true);
-                }}>
-                    <AddButton/>
-                </button>
-                <FormDialog open={openDialog} setOpen={setOpenDialog} setSettingsObject={setCarouselAddingSettings}
-                            typesAvailable={exercise_types}/>
-            </main>
-        </div>
-    );
-};
+                    {(!isLoading || isSuccess) && carouselSettings?.selected_carousels.map((exercise_info, index) => {
+                        return <section key={exercise_info.id}>
+                            <Carousel info={exercise_info}
+                                      setCarouselUpdating={updateCarouselSettingsMutate.mutate}
+                                      setCarouselDelete={deleteCarouselSettingsMutate.mutate}/>
+                        </section>
+                    })}
+                    <button className="add-button" onClick={(e) => {
+                        e.currentTarget.blur();
+                        setOpenDialog(true);
+                    }}>
+                        <AddButton/>
+                    </button>
+                    <FormDialog open={openDialog} setOpen={setOpenDialog}
+                                postCarouselSettingsMutate={postCarouselSettingsMutate.mutate}
+                                typesAvailable={exercise_types}/>
+                </main>
+            </div>
+        );
+    }
+;
 
 export default Home;

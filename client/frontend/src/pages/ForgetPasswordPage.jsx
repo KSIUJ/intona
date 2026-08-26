@@ -259,7 +259,7 @@ const ForgetPasswordPage = () => {
                             </form>
                         </>}
                     {(mutate_send_request.isSuccess && (mutate_handle_verify.isIdle || mutate_handle_verify.isError || mutate_handle_verify.isPending)) && <>
-                            <h1 style={{textAlign: "center"}}>Password reset send for {email_value}</h1>
+                            <h1 style={{textAlign: "center", overflowWrap: "break-word"}}>Password reset send for {email_value}</h1>
                             <form onSubmit={handleVerification} className="verification-card">
                                 <p className="verification-title">Write verification code below</p>
                                 <div className="code-inputs-wrapper">

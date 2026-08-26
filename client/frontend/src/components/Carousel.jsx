@@ -121,7 +121,7 @@ const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type, clic
 };
 
 
-const Carousel = ({info, setCarouselAddingSettings}) => {
+const Carousel = ({info, setCarouselUpdating, setCarouselDelete}) => {
     const [isOpen, setOpen] = useState(false)
     const linkBase = "/exercises";
     const [cacheArray, setCacheArray] = useState([])
@@ -318,19 +318,9 @@ const Carousel = ({info, setCarouselAddingSettings}) => {
                         }}>Cancel
                         </button>
                         <button className="action-btn btn-ok" onClick={() => {
-                            setCarouselAddingSettings(prev => ({
-                                ...prev,
-                                selected_carousels: prev.selected_carousels.map(carousel => {
-                                    if (carousel.id === info.id) {
-                                        return {
-                                            ...carousel,
-                                            filter: workingSettingsArray
-                                        }
-                                    }
-                                    return carousel
-                                })
-                            }))
+                            info.filter = workingSettingsArray
                             setCurrentSettingsArray(workingSettingsArray)
+                            setCarouselUpdating(info)
                             setOpen(false)
                         }}>OK
                         </button>
@@ -340,12 +330,7 @@ const Carousel = ({info, setCarouselAddingSettings}) => {
             )}
 
             <button className={`carousel-header delete-icon`} onClick={() => {
-                setCarouselAddingSettings(prev => ({
-                    ...prev,
-                    selected_carousels: prev.selected_carousels.filter((carousel) => {
-                        return carousel.id !== info.id
-                    })
-                }))
+                setCarouselDelete(info.id)
             }}>
                 <h2 className="carousel-title"><TrashIcon/></h2>
             </button>
@@ -365,18 +350,8 @@ const Carousel = ({info, setCarouselAddingSettings}) => {
                         }
 
                         timerIdRed.current = setTimeout(() => {
-                            setCarouselAddingSettings(prev => ({
-                                ...prev,
-                                selected_carousels: prev.selected_carousels.map((carousel) => {
-                                    if (carousel.id === info.id) {
-                                        return {
-                                            ...carousel,
-                                            exercise_name: value
-                                        }
-                                    }
-                                    return carousel
-                                })
-                            }))
+                            info.exercise_name = value
+                            setCarouselUpdating(info)
                             clearTimeout(timerIdRed.current)
                         }, 1000)
 
