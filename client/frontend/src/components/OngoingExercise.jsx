@@ -349,60 +349,137 @@ export default function OngoingExercise() {
   }, []);
 
   return (
-    <main style={{ padding: "24px" }}>
-      <h2>Exercise in progress</h2>
+    <main
+      style={{
+        minHeight: "100vh",
+        padding: "32px",
+        maxWidth: "900px",
+        margin: "0 auto",
+        fontFamily: "sans-serif",
+      }}
+    >
+      <header style={{ marginBottom: "32px" }}>
+        <h1 style={{ marginBottom: "8px" }}>
+          Exercise
+        </h1>
 
-      <button
-        onClick={() =>
-          handleEndOfExercise(
-            state.log_id,
-            state.exercise_access_token,
-            audio.time,
-            ENDING_STATUS.STOPPED
-          )
-        }
+        <p style={{ margin: 0 }}>
+          Sing along and keep your pitch as close to the target note as possible.
+        </p>
+      </header>
+
+      <section
+        style={{
+          padding: "24px",
+          border: "1px solid #ddd",
+          borderRadius: "12px",
+          marginBottom: "24px",
+        }}
       >
-        Stop
-      </button>
+        <div
+          style={{
+            display: "flex",
+            gap: "12px",
+            flexWrap: "wrap",
+            marginBottom: "24px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => audio.Toggle()}
+            style={{
+              padding: "12px 24px",
+              fontSize: "16px",
+              cursor: "pointer",
+            }}
+          >
+            Start / Pause
+          </button>
 
-      <div style={{ marginTop: "24px" }}>
-        <p>
-          Microphone:{" "}
-          {isListening ? "active" : "inactive"}
-        </p>
+          <button
+            type="button"
+            onClick={() =>
+              handleEndOfExercise(
+                state.log_id,
+                state.exercise_access_token,
+                audio.time,
+                ENDING_STATUS.STOPPED
+              )
+            }
+            style={{
+              padding: "12px 24px",
+              fontSize: "16px",
+              cursor: "pointer",
+            }}
+          >
+            Stop exercise
+          </button>
+        </div>
 
-        {error && <p>{error}</p>}
+        <div>
+          <p>
+            Microphone:{" "}
+            <strong>
+              {isListening ? "active" : "inactive"}
+            </strong>
+          </p>
 
-        <p>Note: {note ?? "-"}</p>
+          {error && <p>{error}</p>}
 
-        <p>
-          Frequency:{" "}
-          {frequency
-            ? `${frequency.toFixed(2)} Hz`
-            : "-"}
-        </p>
+          <p>
+            Note: <strong>{note ?? "-"}</strong>
+          </p>
 
-        <p>
-          Deviation:{" "}
-          {cents !== null
-            ? `${cents > 0 ? "+" : ""}${cents} cents`
-            : "-"}
-        </p>
+          <p>
+            Frequency:{" "}
+            <strong>
+              {frequency
+                ? `${frequency.toFixed(2)} Hz`
+                : "-"}
+            </strong>
+          </p>
 
-        <p>
-          Clarity: {clarity.toFixed(2)}
-        </p>
+          <p>
+            Deviation:{" "}
+            <strong>
+              {cents !== null
+                ? `${cents > 0 ? "+" : ""}${cents} cents`
+                : "-"}
+            </strong>
+          </p>
+
+          <p>
+            Clarity:{" "}
+            <strong>{clarity.toFixed(2)}</strong>
+          </p>
+        </div>
+      </section>
+
+      <section
+        style={{
+          padding: "24px",
+          border: "1px solid #ddd",
+          borderRadius: "12px",
+        }}
+      >
+        <h2 style={{ marginTop: 0 }}>
+          Live results
+        </h2>
 
         <p>
           Average deviation:{" "}
-          {average_deviation.toFixed(2)} cents
+          <strong>
+            {average_deviation.toFixed(2)} cents
+          </strong>
         </p>
 
         <p>
           Time in tune:{" "}
-          {time_in_tune.toFixed(1)}%
+          <strong>
+            {time_in_tune.toFixed(1)}%
+          </strong>
         </p>
-      </div>
+      </section>
     </main>
   );
 }
