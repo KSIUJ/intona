@@ -184,36 +184,60 @@ const Home = () => {
 
         const postCarouselSettingsMutate = useMutation({
             mutationFn: async (data) => addCarouselSetting(data),
-            onSuccess(data) {
-                console.log(`post success ${data}`)
-
-                queryClient.setQueryData(["settings", "carousel", "me"], data)
-                queryClient.invalidateQueries({queryKey: ["settings", "carousel", "me"]})
-
+            onMutate: async (data) => {
+                await queryClient.cancelQueries({queryKey: ["settings", "carousel", "me"]});
+                queryClient.setQueryData(["settings", "carousel", "me"], (oldData) => ({
+                    ...oldData,
+                    selected_carousels: [
+                        ...oldData.selected_carousels,
+                        data
+                    ]
+                }));
             },
-            onError(error, variables) {
+            onSuccess: async () => {
+                await queryClient.invalidateQueries({queryKey: ["settings", "carousel", "me"]})
+            },
+            onError: async (error, variables) => {
                 console.log(`variables post ${JSON.stringify(variables)}`)
                 console.log(`post error ${error.toString()}`)
-                let array = JSON.parse(localStorage.getItem("carousel_settings"))
+                const json_data = JSON.parse(localStorage.getItem("carousel_settings"))
+                const array = json_data ? json_data : {
+                    "selected_carousels": [
+                        generateTemplate("Song"), generateTemplate("Exercise")
+                    ]
+                }
                 array.selected_carousels.push(variables)
                 localStorage.setItem("carousel_settings", JSON.stringify(array))
 
                 queryClient.setQueryData(["settings", "carousel", "me"], array)
-                queryClient.invalidateQueries({queryKey: ["settings", "carousel", "me"]})
-
-            }
+            },
         })
 
         const updateCarouselSettingsMutate = useMutation({
             mutationFn: async (data) => updateCarouselSetting(data),
-            onSuccess(data) {
-                console.log(`put success ${data}`)
-                queryClient.setQueryData(["settings", "carousel", "me"], data)
+            onMutate: async (data) => {
+                await queryClient.cancelQueries({queryKey: ["settings", "carousel", "me"]});
+                console.log(`${JSON.stringify(data)} upadate data`)
+                queryClient.setQueryData(["settings", "carousel", "me"], (oldData) => ({
+                    ...oldData,
+                    selected_carousels: oldData.selected_carousels.map((carousel) => {
+                        if (carousel.id === data.id) {
+                            carousel = data
+                        }
+                        return carousel
+                    })
+                }));
             },
-            onError(error, variables) {
-                console.log(`variables update ${variables}`)
-                console.log(`update error ${error.toString()}`)
-                let array = JSON.parse(localStorage.getItem("carousel_settings"))
+            onSuccess: async () => {
+                await queryClient.invalidateQueries({queryKey: ["settings", "carousel", "me"]})
+            },
+            onError: async (error, variables) => {
+                const json_data = JSON.parse(localStorage.getItem("carousel_settings"))
+                const array = json_data ? json_data : {
+                    "selected_carousels": [
+                        generateTemplate("Song"), generateTemplate("Exercise")
+                    ]
+                }
                 array.selected_carousels = array.selected_carousels.map((setting) => {
                     if (setting.id === variables.id) {
                         setting = variables
@@ -223,29 +247,37 @@ const Home = () => {
                 localStorage.setItem("carousel_settings", JSON.stringify(array))
 
                 queryClient.setQueryData(["settings", "carousel", "me"], array)
-                queryClient.invalidateQueries({queryKey: ["settings", "carousel", "me"]})
-
             }
         })
 
         const deleteCarouselSettingsMutate = useMutation({
             mutationFn: async (data) => deleteCarouselSettings(data),
-            onSuccess(data) {
-                console.log(`delete success ${data}`)
-                queryClient.setQueryData(["settings", "carousel", "me"], data)
+            onMutate: async (data) => {
+                await queryClient.cancelQueries({queryKey: ["settings", "carousel", "me"]});
+                queryClient.setQueryData(["settings", "carousel", "me"], (oldData) => ({
+                    ...oldData,
+                    selected_carousels: oldData.selected_carousels.filter((carousel) => carousel.id !== data)
+                }));
             },
-            onError(error, variables) {
+            onSuccess: async () => {
+                await queryClient.invalidateQueries({queryKey: ["settings", "carousel", "me"]})
+
+            },
+            onError: async (error, variables) => {
                 console.log(`variables delete ${variables}`)
                 console.log(`delete error ${error.toString()}`)
-                let array = JSON.parse(localStorage.getItem("carousel_settings"))
+                const json_data = JSON.parse(localStorage.getItem("carousel_settings"))
+                const array = json_data ? json_data : {
+                    "selected_carousels": [
+                        generateTemplate("Song"), generateTemplate("Exercise")
+                    ]
+                }
                 array.selected_carousels = array.selected_carousels.filter((setting) => {
                     return setting.id !== variables
                 })
                 localStorage.setItem("carousel_settings", JSON.stringify(array))
 
                 queryClient.setQueryData(["settings", "carousel", "me"], array)
-                queryClient.invalidateQueries({queryKey: ["settings", "carousel", "me"]})
-
             }
         })
 
