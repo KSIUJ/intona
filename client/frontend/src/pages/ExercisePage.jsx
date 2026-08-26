@@ -49,10 +49,10 @@ export default function ExercisePage() {
   };
 
   const handlePause = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    }
+    if (!audioRef.current) return;
+
+    audioRef.current.pause();
+    setIsPlaying(false);
   };
 
   const handleStop = () => {
@@ -130,61 +130,94 @@ export default function ExercisePage() {
       ? (timeInTuneFrames / totalPitchFrames) * 100
       : 0;
 
+  const deviationStatus =
+    cents === null
+      ? "Waiting for pitch"
+      : Math.abs(cents) <= 10
+        ? "Excellent"
+        : Math.abs(cents) <= 20
+          ? "Good"
+          : cents > 0
+            ? "Too high"
+            : "Too low";
+
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: "900px",
-        margin: "0 auto",
-        padding: "40px 16px",
-        boxSizing: "border-box",
-      }}
-    >
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "20px",
-          flexWrap: "wrap",
-          gap: "12px",
-        }}
-      >
+    <main className="page-container">
+      <header className="page-header">
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "40px",
+            justifyContent: "space-between",
+            gap: "20px",
             flexWrap: "wrap",
           }}
         >
-          <div
-            style={{
-              fontWeight: 800,
-              fontSize: "24px",
-              color: "#0d9488",
-            }}
-          >
-            🎤 INTONA
+          <div>
+            <div
+              style={{
+                color: "var(--color-primary)",
+                fontWeight: 800,
+                fontSize: "15px",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                marginBottom: "6px",
+              }}
+            >
+              INTONA
+            </div>
+
+            <h1
+              style={{
+                marginBottom: "6px",
+              }}
+            >
+              {item?.title ?? "Exercise"}
+            </h1>
+
+            <p
+              className="page-subtitle"
+              style={{
+                marginBottom: 0,
+              }}
+            >
+              Listen, sing and follow your pitch in real time.
+            </p>
           </div>
 
           <div
+            className="app-card"
             style={{
-              fontSize: "24px",
-              fontWeight: 600,
+              padding: "10px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
             }}
           >
-            🎵 {item?.title ?? "Exercise"}
+            <span
+              style={{
+                width: "10px",
+                height: "10px",
+                borderRadius: "50%",
+                background: isListening
+                  ? "#35a66f"
+                  : "var(--color-border)",
+              }}
+            />
+
+            <strong>
+              {isListening
+                ? "Microphone active"
+                : "Microphone inactive"}
+            </strong>
           </div>
         </div>
       </header>
 
       <section
+        className="app-card"
         style={{
-          background: "white",
-          borderRadius: "16px",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-          padding: "16px",
+          padding: "20px",
         }}
       >
         <NoteHighway
@@ -200,87 +233,132 @@ export default function ExercisePage() {
 
       <section
         style={{
-          display: "flex",
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(250px, 1fr))",
           gap: "16px",
           marginTop: "16px",
-          flexWrap: "wrap",
         }}
       >
         <div
+          className="app-card"
           style={{
-            flex: "2 1 420px",
-            padding: "20px",
-            borderRadius: "16px",
-            background: "white",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+            padding: "22px",
           }}
         >
           <h3>Live pitch</h3>
 
-          <p>
-            Microphone:{" "}
-            <strong>
-              {isListening ? "active" : "inactive"}
-            </strong>
-          </p>
-
-          {error && <p>{error}</p>}
-
-          <p>
-            Note: <strong>{note ?? "-"}</strong>
-          </p>
-
-          <p>
-            Frequency:{" "}
-            <strong>
-              {frequency
-                ? `${frequency.toFixed(2)} Hz`
-                : "-"}
-            </strong>
-          </p>
-
-          <p>
-            Clarity:{" "}
-            <strong>{clarity.toFixed(2)}</strong>
-          </p>
-        </div>
-
-        <div
-          style={{
-            flex: "1 1 220px",
-            padding: "20px",
-            borderRadius: "16px",
-            background: "white",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-          }}
-        >
-          <h3>Deviation</h3>
+          {error && (
+            <div
+              style={{
+                padding: "10px 12px",
+                marginBottom: "16px",
+                borderRadius: "var(--radius-small)",
+                background: "#fff0f0",
+              }}
+            >
+              {error}
+            </div>
+          )}
 
           <div
             style={{
-              fontSize: "32px",
-              fontWeight: 700,
-              marginBottom: "8px",
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(2, minmax(0, 1fr))",
+              gap: "12px",
             }}
           >
-            {cents !== null
-              ? `${cents > 0 ? "+" : ""}${cents}`
-              : "-"}
+            <Metric
+              label="Note"
+              value={note ?? "-"}
+            />
+
+            <Metric
+              label="Frequency"
+              value={
+                frequency
+                  ? `${frequency.toFixed(2)} Hz`
+                  : "-"
+              }
+            />
+
+            <Metric
+              label="Clarity"
+              value={clarity.toFixed(2)}
+            />
+
+            <Metric
+              label="Status"
+              value={
+                isListening ? "Listening" : "Idle"
+              }
+            />
+          </div>
+        </div>
+
+        <div
+          className="app-card"
+          style={{
+            padding: "22px",
+          }}
+        >
+          <h3>Pitch deviation</h3>
+
+          <div
+            style={{
+              textAlign: "center",
+              padding: "14px 0 20px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "46px",
+                fontWeight: 800,
+                lineHeight: 1,
+              }}
+            >
+              {cents !== null
+                ? `${cents > 0 ? "+" : ""}${cents}`
+                : "-"}
+            </div>
+
+            <div
+              className="page-subtitle"
+              style={{
+                marginTop: "6px",
+              }}
+            >
+              cents
+            </div>
+
+            <strong
+              style={{
+                display: "block",
+                marginTop: "10px",
+              }}
+            >
+              {deviationStatus}
+            </strong>
           </div>
 
-          <p>cents</p>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px",
+            }}
+          >
+            <Metric
+              label="Average deviation"
+              value={`${averageDeviation.toFixed(2)} ¢`}
+            />
 
-          <p>
-            Average:{" "}
-            <strong>
-              {averageDeviation.toFixed(2)}
-            </strong>
-          </p>
-
-          <p>
-            Time in tune:{" "}
-            <strong>{timeInTune.toFixed(1)}%</strong>
-          </p>
+            <Metric
+              label="Time in tune"
+              value={`${timeInTune.toFixed(1)}%`}
+            />
+          </div>
         </div>
       </section>
 
@@ -288,56 +366,47 @@ export default function ExercisePage() {
         style={{
           display: "flex",
           justifyContent: "center",
-          gap: "16px",
+          alignItems: "center",
+          gap: "12px",
           marginTop: "24px",
           flexWrap: "wrap",
         }}
       >
         <button
+          type="button"
+          className="btn btn-secondary"
           onClick={handlePause}
           disabled={!isPlaying}
-          style={{
-            padding: "14px 28px",
-            borderRadius: "999px",
-            border: "1px solid #d0d3d9",
-            background: "white",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
         >
           Pause
         </button>
 
         <button
+          type="button"
+          className="btn btn-primary"
           onClick={handleStart}
-          style={{
-            padding: "14px 40px",
-            borderRadius: "999px",
-            border: "none",
-            background: "#0d9488",
-            color: "white",
-            fontWeight: 700,
-            fontSize: "16px",
-            cursor: "pointer",
-          }}
         >
-          Start
+          {isPlaying ? "Playing" : "Start"}
         </button>
 
         <button
+          type="button"
+          className="btn btn-secondary"
           onClick={handleStop}
-          style={{
-            padding: "14px 28px",
-            borderRadius: "999px",
-            border: "1px solid #d0d3d9",
-            background: "white",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
         >
           Stop
         </button>
       </div>
+
+      <p
+        className="page-subtitle"
+        style={{
+          textAlign: "center",
+          marginTop: "14px",
+        }}
+      >
+        Start the exercise and sing along with the notes.
+      </p>
 
       <div
         style={{
@@ -356,6 +425,31 @@ export default function ExercisePage() {
         ref={audioRef}
         src={AUDIO_URL}
       />
+    </main>
+  );
+}
+
+function Metric({ label, value }) {
+  return (
+    <div
+      style={{
+        padding: "12px",
+        border: "1px solid var(--color-border)",
+        borderRadius: "var(--radius-small)",
+        background: "var(--color-background)",
+      }}
+    >
+      <div
+        className="page-subtitle"
+        style={{
+          fontSize: "12px",
+          marginBottom: "4px",
+        }}
+      >
+        {label}
+      </div>
+
+      <strong>{value}</strong>
     </div>
   );
 }
