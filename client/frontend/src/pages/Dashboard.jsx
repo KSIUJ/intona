@@ -1,5 +1,5 @@
 import "./Dashboard.css";
-import {Link, useNavigate} from "react-router-dom";
+import {Link} from "react-router-dom";
 import {useQuery} from "@tanstack/react-query";
 
 

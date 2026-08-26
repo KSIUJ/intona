@@ -1,67 +1,86 @@
-import {useNavigate, useParams, useSearchParams} from "react-router-dom";
-import {useMutation} from "@tanstack/react-query";
+import { useRef, useState} from "react";
+import ScoreViewer from "../components/ScoreViewer";
+import NoteHighway from "../components/NoteHighway";
+import LyricsTeleprompter from "../components/LyricsTeleprompter";
+import { useParams } from "react-router-dom";
+import { songs, exercises } from "../components/Carousel";
+import PlaceholderBox from "../components/PlaceholderBox";
 
-const ExercisePage = () => {
-    const {id, exercise_slug} = useParams();
-    const [searchParams] = useSearchParams()
-    const navigate = useNavigate()
 
-    const verifyUser = async (id, exercise_slug) => {
-        const api_response = await fetch(`/api/exercises/${id}/start`, {
-            method: "POST",
-            credentials: 'include'
-        })
-        // console.log("api_response")
-        if (!api_response.ok) {
-            const errorText = await api_response.text();
-            console.error("error message:", errorText);
+export default function ExercisePage() {
+    const { exercise_slug } = useParams();
 
-            const api_response_error = new Error(errorText);
-            api_response_error.status = api_response.status;
-            throw api_response_error;
-        }
-        // console.log("api_response2")
+    const allItems = [...exercises, ...songs];
+    const item = allItems.find((entry) => entry.slug === exercise_slug);
 
-        const api_response_json = await api_response.json()
-        api_response_json.id = id
-        api_response_json.exercise_slug = exercise_slug
-        // console.log("api_response3")
-        return api_response_json;
+    const MUSICXML_URL = item?.musicXmlUrl;
+    const AUDIO_URL = item?.audioUrl;
+
+    const [notes, setNotes] = useState([]);
+
+    const [showNotes, setShowNotes] = useState(false);
+    
+    const audioRef = useRef(null);
+
+    function handleStart() {
+        
+        audioRef.current?.play();
     }
-
-    const {mutate} = useMutation({
-        mutationFn: (data) => verifyUser(data.id, data.exercise_slug),
-        onSuccess: (data) => {
-            localStorage.removeItem('exercise_access_token')
-            localStorage.removeItem('time')
-            localStorage.removeItem('time_in_tune')
-            localStorage.removeItem('average_deviation')
-            navigate(`/exercises/${data.id}/${data.exercise_slug}/start`, {
-                state: {
-                    presigned_url: data.presigned_url,
-                    processed_data: data.processed_data,
-                    log_id: data.log_id,
-                    exercise_access_token: data.exercise_access_token
-                }
-            })
-        },
-        onError: () => {
-            console.log("error with starting exercise")
-            navigate('/')
-        }
-    });
-    const handleClick = (e) => {
-        e.preventDefault()
-        mutate({id: id, exercise_slug: exercise_slug})
-
+    function handleStop() {
+    if (audioRef.current) {
+        audioRef.current.pause();
     }
+}
     return (
-        <main>
-            <h1>{searchParams.get("type")} page</h1>
-            <p>Selected {searchParams.get("type")}: {exercise_slug}</p>
-            <button onClick={handleClick}>Start</button>
-        </main>
-    );
-};
+        <div style={{ width: "100%", maxWidth: "800px", margin: "0 auto", padding: "40px 16px 0", boxSizing: "border-box" }}>
 
-export default ExercisePage;
+    {/* Nagłówek: tytuł jest prawdziwy, reszta to miejsce na później */}
+   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "44px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 800, fontSize: "24px", color: "#0d9488", letterSpacing: "0.5px" }}>
+            <span role="img" aria-label="logo">🎤</span>
+            INTONA
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "24px", fontWeight: 600, color: "#1a1c1f" }}>
+            <span role="img" aria-label="song">🎵</span>
+            {item?.title ?? "Ćwiczenie"}
+        </div>
+    </div>
+</div>
+
+    <div style={{ background: "white", borderRadius: "16px", boxShadow: "0 2px 12px rgba(0,0,0,0.08)", padding: "16px" }}>
+        <NoteHighway notes={notes} audioRef={audioRef} />
+        <LyricsTeleprompter notes={notes} audioRef={audioRef} />
+    </div>
+
+    <div style={{ display: "flex", gap: "16px", marginTop: "16px" }}>
+        <div style={{ flex: 2 }}>
+            <PlaceholderBox label="Pitch curve" height="140px" />
+        </div>
+        <div style={{ flex: 1 }}>
+            <PlaceholderBox label="Deviation in cents" height="140px" />
+        </div>
+    </div>
+
+   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "16px", marginTop: "20px", flexWrap: "wrap" }}>
+        <button onClick={handleStop} style={{ padding: "14px 28px", borderRadius: "999px", border: "1px solid #d0d3d9", background: "white", fontWeight: 600, cursor: "pointer" }}>
+            Pauza
+        </button>
+        <button onClick={handleStart} style={{ padding: "14px 40px", borderRadius: "999px", border: "none", background: "#0d9488", color: "white", fontWeight: 700, fontSize: "16px", cursor: "pointer" }}>
+            Start
+        </button>
+
+    </div>
+    
+    {/* Wczytuje nuty z pliku — ukryty wizualnie, ale musi być zamontowany,
+        żeby onNotesLoaded w ogóle się wykonało */}
+    <div style={{ visibility: showNotes ? "visible" : "hidden" }}>
+        <ScoreViewer musicXmlUrl={MUSICXML_URL} onNotesLoaded={setNotes} />
+    </div>
+
+    {/* Element audio — niewidoczny, sterowany programowo przez audioRef */}
+    <audio ref={audioRef} src={AUDIO_URL} />
+
+</div>
+    );
+}
