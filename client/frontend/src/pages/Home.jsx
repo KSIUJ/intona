@@ -148,8 +148,8 @@ const Home = () => {
         const {data: carouselSettings} = useQuery({
             queryKey: ["settings", "carousel", "me"],
             queryFn: fetchCarouselSettings,
-            staleTime: Infinity,
-            refetchOnWindowFocus: false
+            staleTime: 0,
+            refetchOnWindowFocus: true
         })
 
         const {data: exercise_types} = useQuery({
@@ -186,7 +186,9 @@ const Home = () => {
             mutationFn: async (data) => addCarouselSetting(data),
             onSuccess(data) {
                 console.log(`post success ${data}`)
+
                 queryClient.setQueryData(["settings", "carousel", "me"], data)
+                queryClient.invalidateQueries({queryKey: ["settings", "carousel", "me"]})
 
             },
             onError(error, variables) {
@@ -194,8 +196,11 @@ const Home = () => {
                 console.log(`post error ${error.toString()}`)
                 let array = JSON.parse(localStorage.getItem("carousel_settings"))
                 array.selected_carousels.push(variables)
-                queryClient.setQueryData(["settings", "carousel", "me"], array)
                 localStorage.setItem("carousel_settings", JSON.stringify(array))
+
+                queryClient.setQueryData(["settings", "carousel", "me"], array)
+                queryClient.invalidateQueries({queryKey: ["settings", "carousel", "me"]})
+
             }
         })
 
@@ -217,6 +222,9 @@ const Home = () => {
                 })
                 localStorage.setItem("carousel_settings", JSON.stringify(array))
 
+                queryClient.setQueryData(["settings", "carousel", "me"], array)
+                queryClient.invalidateQueries({queryKey: ["settings", "carousel", "me"]})
+
             }
         })
 
@@ -233,8 +241,10 @@ const Home = () => {
                 array.selected_carousels = array.selected_carousels.filter((setting) => {
                     return setting.id !== variables
                 })
-                queryClient.setQueryData(["settings", "carousel", "me"], array)
                 localStorage.setItem("carousel_settings", JSON.stringify(array))
+
+                queryClient.setQueryData(["settings", "carousel", "me"], array)
+                queryClient.invalidateQueries({queryKey: ["settings", "carousel", "me"]})
 
             }
         })
