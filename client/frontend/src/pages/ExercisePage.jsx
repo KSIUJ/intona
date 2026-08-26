@@ -5,6 +5,7 @@ import ScoreViewer from "../components/ScoreViewer";
 import NoteHighway from "../components/NoteHighway";
 import LyricsTeleprompter from "../components/LyricsTeleprompter";
 import { songs, exercises } from "../components/Carousel";
+import CentDeviationMeter from "../components/CentDeviationMeter";
 import { usePitchDetection } from "../hooks/usePitchDetection";
 
 export default function ExercisePage() {
@@ -304,43 +305,9 @@ export default function ExercisePage() {
           }}
         >
           <h3>Pitch deviation</h3>
-
-          <div
-            style={{
-              textAlign: "center",
-              padding: "14px 0 20px",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "46px",
-                fontWeight: 800,
-                lineHeight: 1,
-              }}
-            >
-              {cents !== null
-                ? `${cents > 0 ? "+" : ""}${cents}`
-                : "-"}
+            <div style={{ display: "flex", justifyContent: "center", padding: "16px 0" }}>
+                <CentDeviationMeter cents={cents} isListening={isListening} />
             </div>
-
-            <div
-              className="page-subtitle"
-              style={{
-                marginTop: "6px",
-              }}
-            >
-              cents
-            </div>
-
-            <strong
-              style={{
-                display: "block",
-                marginTop: "10px",
-              }}
-            >
-              {deviationStatus}
-            </strong>
-          </div>
 
           <div
             style={{
