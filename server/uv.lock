@@ -1061,6 +1061,7 @@ requires-dist = [
     { name = "greenlet", specifier = ">=3.5.3" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "iniconfig", specifier = ">=2.3.0" },
+    { name = "numpy", specifier = ">=2.0.0" },
     { name = "psycopg2", specifier = ">=2.9.12" },
     { name = "pwdlib", extras = ["argon2"], specifier = ">=0.3.0" },
     { name = "pydantic-settings", specifier = ">=2.14.2" },

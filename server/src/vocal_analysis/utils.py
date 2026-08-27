@@ -1,16 +1,48 @@
+import json
 import logging
-
+from botocore.exceptions import ClientError
+from fastapi import HTTPException, status
 from sqlmodel import select, func
-from sqlalchemy.orm.attributes import flag_modified
+from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified 
 
-from src.exercises.models import Exercise
-from src.logs.models import ExerciseLogs
-from src.stats.models import UserStats
-from src.stats.utils import actualize_user_streak
-from src.database import get_db
+from src.config import settings
+from src.exercises.models import Exercise 
+from src.logs.models import ExerciseLogs 
+from src.stats.models import UserStats 
+from src.stats.utils import actualize_user_streak 
+from src.services.s3_bucket import bucket_client
 
-logging.basicConfig(level=logging.INFO)
+def fetch_target_notes_from_s3(exercise_id: int) -> list[dict]:
+    # Downloads the results.json file from S3 containing the generated reference musical scores
+    try:
+        response = bucket_client.get_object(
+            Bucket=settings.bucket_name, 
+            Key=f"exercise/{exercise_id}/results.json"
+        )
+        content = response["Body"].read().decode("utf-8")
+        data = json.loads(content)
 
+        processed_data = data.get("processed data", {})
+        notes = processed_data.get("notes")
+        
+        if isinstance(notes, list):
+            return notes
+        else:
+            raise ValueError("Invalid structure of the results.json file")
+            
+    except ClientError as e:
+        logging.error(f"S3 download error {exercise_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="The analysis file for this exercise was not found in S3."
+        )
+    except Exception as e:
+        logging.error(f"Error parsing results.json for the exercise {exercise_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error reading results from storage"
+        )
 
 async def add_exercise_result(db, user_id: int, exercise_log: ExerciseLogs, user_stats):
     user_stats.average_score = (
