@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import useAudio from "../hooks/useAudio";
@@ -17,6 +17,7 @@ export default function OngoingExercise() {
   const navigate = useNavigate();
   const location_data = useLocation();
   const { state } = location_data;
+  const { id, exercise_slug } = useParams();
 
   const audio = useAudio(state.presigned_url);
 
@@ -109,10 +110,19 @@ export default function OngoingExercise() {
         variables.average_deviation,
         variables.exercise_end_status
       ),
-    onSuccess() {
+    onSuccess(data, variables) {
       console.log("successfully ended exercise");
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      navigate("/");
+      navigate(`/exercises/${id}/${exercise_slug}/summary`, {
+        state: {
+          exercise_duration: data?.exercise_duration ?? variables.exercise_duration,
+          time_in_tune: data?.time_in_tune ?? variables.time_in_tune,
+          average_deviation: data?.average_deviation ?? variables.average_deviation,
+          exercise_end_status: data?.exercise_end_status ?? variables.exercise_end_status,
+          counted_toward_stats:
+            data?.counted_toward_stats ?? variables.exercise_end_status === ENDING_STATUS.ENDED,
+        },
+      });
     },
     onError(error) {
       console.log("Unsuccessfully ended exercise");
