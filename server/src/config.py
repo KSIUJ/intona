@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     bucket_secret_key: SecretStr
     bucket_access_key: SecretStr
 
+    resend_api_key: SecretStr
+
     successful_upload_url: str
 
     model_config = SettingsConfigDict(
@@ -21,7 +23,7 @@ class Settings(BaseSettings):
 
     secret_key: SecretStr
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    access_token_expire_minutes: int = 15
     database_url: str
     test_database_url: str
 

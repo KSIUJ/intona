@@ -6,6 +6,7 @@ from fastapi import UploadFile, File, HTTPException
 from sqlmodel import select
 from sqlalchemy.exc import IntegrityError, DataError, OperationalError
 
+from src.exercises.enums import DifficultyEnum
 from src.config import settings
 from src.database import SessionDep
 from src.exercises.models import Exercise, ProcessExercise
@@ -39,9 +40,9 @@ async def request_access():
     return presigned_post
 
 
-async def register_exercise(session: SessionDep, exercise_name: str, file_path: str, exercise_type: int):
+async def register_exercise(session: SessionDep, exercise_name: str, slug: str, difficulty: DifficultyEnum, rating: int, exercise_type: int, file_path: str):
     try:
-        new_exercise = Exercise(exercise_name=exercise_name, type=exercise_type)
+        new_exercise = Exercise(exercise_name=exercise_name, slug=slug, difficulty=difficulty, rating=rating, type=exercise_type)
         session.add(new_exercise)
         await session.flush()
 
