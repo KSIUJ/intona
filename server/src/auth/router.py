@@ -7,8 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException, status, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import select, func
 
-from src.settings.utils import generate_default_settings
-from src.settings.schemas import UserPreferredSettings
 from src.config import settings
 from src.auth.models import User, RefreshToken
 from src.auth.schemas import UserCreate, UserPrivate, UserPublic, Token, Tokens
@@ -16,7 +14,6 @@ from src.auth.utils import hash_password, verify_password, create_access_token
 from src.auth.dependencies import AdminUser, CurrentUser, SessionDep
 from src.stats.models import UserStats
 from src.exercises.models import ExerciseType
-from src.settings.models import UserPreferredSettingsModel
 
 logging.basicConfig(level=logging.INFO)
 
@@ -81,11 +78,7 @@ async def create_user(user: UserCreate, db: SessionDep):
                            days_active=0,
                            favorite_exericse=None,
                            last_activity_date=datetime.now(UTC))
-
-
-    user_default_carousel_settings = UserPreferredSettingsModel(user_id=new_user.id)
     db.add(user_stats)
-    db.add(user_default_carousel_settings)
     await db.commit()
     await db.refresh(new_user)
 

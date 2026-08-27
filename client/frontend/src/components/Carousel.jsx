@@ -1,3 +1,4 @@
+
 /* eslint-disable react-refresh/only-export-components */
 import "./Carousel.css";
 import {useEffect, useRef, useState} from "react";

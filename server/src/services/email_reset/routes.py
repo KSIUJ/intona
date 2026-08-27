@@ -47,7 +47,7 @@ async def request_reset(db: SessionDep, email_data: EmailData):
     }
 
     email = resend.Emails.send(params)
-    # logging.info(email)
+    logging.info(email)
 
     return {"message": "password reset request sent if your email is correct"}
 

@@ -17,7 +17,6 @@ from src.stats.router import router as stats_router
 from src.vocal_analysis.router import router as vocal_analysis_router
 from src.logs.router import router as logs_router
 from src.services.email_reset.routes import router as email_reset_router
-from src.settings.router import router as user_settings_router
 
 
 @asynccontextmanager
@@ -47,7 +46,6 @@ app.include_router(stats_router, prefix="/api/users", tags=["users"])
 app.include_router(vocal_analysis_router, prefix="/api/vocal_analysis", tags=["vocal_analysis"])
 app.include_router(logs_router, prefix="/api/logs", tags=["logs"])
 app.include_router(email_reset_router, prefix="/api/email", tags=["email"])
-app.include_router(user_settings_router, prefix="/api/settings", tags=["settings"])
 
 logger = logging.getLogger("uvicorn.error")
 

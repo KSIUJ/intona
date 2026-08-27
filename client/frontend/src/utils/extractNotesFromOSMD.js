@@ -1,3 +1,4 @@
+
 export function extractNotesFromOSMD(osmd) {
     const result = [];
 
@@ -25,11 +26,11 @@ export function extractNotesFromOSMD(osmd) {
                 continue;
             }
             if (!globalThis.__loggedLyricSample) {
-                const entry = Object.values(voiceEntry.LyricsEntries.table)[0];
-                console.log("Wpis (entry):", entry);
-                console.log("Wartość (entry.value):", entry.value);
-                globalThis.__loggedLyricSample = true;
-            }
+    const entry = Object.values(voiceEntry.LyricsEntries.table)[0];
+    console.log("Entry:", entry);
+    console.log("Value (entry.value):", entry.value);
+    globalThis.__loggedLyricSample = true;
+}
             const notes = voiceEntry.Notes ?? [];
 
             for (const note of notes) {
@@ -47,16 +48,16 @@ export function extractNotesFromOSMD(osmd) {
                 if (lyricsTable) {
                     const entries = Object.values(lyricsTable);
                     if (entries.length > 0) {
-                        lyricText = entries[0].value?.Text ?? null;
+                    lyricText = entries[0].value?.Text ?? null;
                     }
-                }
+                }   
                 result.push({
                     pitch,
                     halfTone,
                     startTimeSeconds,
                     durationSeconds,
                     lyricText,
-                });
+});
             }
         }
 
@@ -109,7 +110,7 @@ function getCorrectedQuarterNoteBpm(osmd, rawBpm) {
 
         return rawBpm;
     } catch (error) {
-        console.warn("Nie udało się sprawdzić metrum, używam surowego BPM:", error);
+        console.warn("Failed to check the time signature, using raw BPM:", error);
         return rawBpm;
     }
 }

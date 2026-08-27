@@ -6,6 +6,7 @@ import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import ExercisePage from "./pages/ExercisePage";
 import OngoingExercise from "./components/OngoingExercise.jsx";
+import ExerciseSummary from "./pages/ExerciseSummary.jsx";
 import SignUp from "./pages/SignUp.jsx";
 import ForgetPasswordPage from "./pages/ForgetPasswordPage.jsx";
 
@@ -23,6 +24,7 @@ function App() {
                     <Route path="/dashboard" element={<Dashboard/>}/>
                     <Route path="/exercises/:id/:exercise_slug" element={<ExercisePage/>}/>
                     <Route path="/exercises/:id/:exercise_slug/start" element={<OngoingExercise/>}/>
+                    <Route path="/exercises/:id/:exercise_slug/summary" element={<ExerciseSummary/>}/>
                 </Routes>
             </BrowserRouter>
         </QueryClientProvider>

@@ -21,7 +21,6 @@ const Login = () => {
         mutationFn: (formData) => getToken(formData),
         onSuccess() {
             queryClient.invalidateQueries({queryKey: ["logged_check"]})
-            queryClient.invalidateQueries({queryKey: ["settings", "carousel", "me"]})
             navigate("/dashboard")
         }
     })
@@ -29,7 +28,7 @@ const Login = () => {
     const getToken = async (formData) => {
         const response = await fetch("/api/auth/token", {
             method: "POST",
-            body: formData, // FormData jest wysyłana bezpośrednio jako body
+            body: formData, // FormData is sent directly as the body
         });
 
         if (!response.ok) {
