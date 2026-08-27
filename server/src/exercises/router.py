@@ -9,7 +9,7 @@ from sqlmodel import select, delete
 from src.exercises.schemas import TestingExerciseInfo
 from src.exercises.models import ExerciseAvailabilityLog
 from src.logs.enums import EndingStatusEnum
-from src.exercises.schemas import ExerciseResult, ExerciseDeleteInfo, ExerciseTypeInfo
+from src.exercises.schemas import ExerciseResult, ExerciseEndResult, ExerciseDeleteInfo, ExerciseTypeInfo
 from src.auth.dependencies import CurrentUser
 from src.config import settings
 from src.database import SessionDep
@@ -264,7 +264,7 @@ async def start_exercise(exercise_id: int, user: CurrentUser, db: SessionDep):
 
 # i won't use access token to authenticate user because refresh token and access token
 # can expire when someone is exercising
-@router.post("/{exercise_log_id}/end")
+@router.post("/{exercise_log_id}/end", response_model=ExerciseEndResult)
 async def end_exercise(db: SessionDep, exercise_log_id: str, exercise_result: ExerciseResult):
     exercise_log_id = int(exercise_log_id)
 
@@ -286,6 +286,8 @@ async def end_exercise(db: SessionDep, exercise_log_id: str, exercise_result: Ex
 
     user_stats.total_practice_time += exercise_result.exercise_duration
 
+    counted_toward_stats = False
+
     if exercise_result.exercise_end_status == EndingStatusEnum.ENDED:
         exercise = await db.exec(select(Exercise).where(Exercise.id == exercise_log.exercise_id))
         exercise = exercise.one()
@@ -299,15 +301,24 @@ async def end_exercise(db: SessionDep, exercise_log_id: str, exercise_result: Ex
             await actualize_user_streak(user_stats, db)
             await update_favorite_exercise(user_stats, exercise_log.exercise_id, db)
             exercise_log.status = EndingStatusEnum.ENDED
+            counted_toward_stats = True
             logging.info("exercise ended properly and results should be included")
         else:
             logging.info("The exercise was not ended properly")
-            return HTTPException(status_code=409, detail="The exercise was not ended properly")
+            raise HTTPException(status_code=409, detail="The exercise was not ended properly")
     else:
         exercise_log.status = EndingStatusEnum.STOPPED
         db.add(user_stats)
         logging.info("exercise ended properly and results should not be included (total_practice_time is an exception)")
     await db.commit()
+
+    return ExerciseEndResult(
+        exercise_duration=exercise_log.exercise_duration,
+        time_in_tune=exercise_log.time_in_tune,
+        average_deviation=exercise_log.average_deviation,
+        exercise_end_status=exercise_log.status,
+        counted_toward_stats=counted_toward_stats,
+    )
 
 
 @router.delete("/{exercise_log_id}/end")

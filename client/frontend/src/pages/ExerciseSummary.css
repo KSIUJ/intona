@@ -1,0 +1,98 @@
+.summary-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 24px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.summary-progress-circle {
+  width: 170px;
+  height: 170px;
+  padding: 14px;
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: conic-gradient(
+    var(--color-primary) 0deg var(--progress-angle, 0deg),
+    #eee8f5 var(--progress-angle, 0deg) 360deg
+  );
+}
+
+.summary-progress-circle-inner {
+  width: 142px;
+  height: 142px;
+  border-radius: 50%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+
+  background-color: var(--color-surface);
+}
+
+.summary-progress-circle-inner strong {
+  color: var(--color-text);
+  font-size: 32px;
+}
+
+.summary-progress-circle-inner span {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.summary-band {
+  margin: 0;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.summary-band-great {
+  color: #1f9d55;
+}
+
+.summary-band-good {
+  color: var(--color-primary);
+}
+
+.summary-band-practice {
+  color: #b4530a;
+}
+
+.summary-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.summary-stat-tile {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summary-stat-label {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.summary-stat-value {
+  font-size: 22px;
+}
+
+.summary-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}

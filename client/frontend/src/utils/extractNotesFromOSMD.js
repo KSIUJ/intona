@@ -27,8 +27,8 @@ export function extractNotesFromOSMD(osmd) {
             }
             if (!globalThis.__loggedLyricSample) {
     const entry = Object.values(voiceEntry.LyricsEntries.table)[0];
-    console.log("Wpis (entry):", entry);
-    console.log("Wartość (entry.value):", entry.value);
+    console.log("Entry:", entry);
+    console.log("Value (entry.value):", entry.value);
     globalThis.__loggedLyricSample = true;
 }
             const notes = voiceEntry.Notes ?? [];
@@ -110,7 +110,7 @@ function getCorrectedQuarterNoteBpm(osmd, rawBpm) {
 
         return rawBpm;
     } catch (error) {
-        console.warn("Nie udało się sprawdzić metrum, używam surowego BPM:", error);
+        console.warn("Failed to check the time signature, using raw BPM:", error);
         return rawBpm;
     }
 }

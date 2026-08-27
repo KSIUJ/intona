@@ -40,8 +40,8 @@ export default function ExercisePage() {
         });
     };
 
-    if (isLoading) return <p>Ładowanie ćwiczenia...</p>;
-    if (isError) return <p>Wystąpił błąd!</p>;
+    if (isLoading) return <p>Loading exercise...</p>;
+    if (isError) return <p>An error occurred!</p>;
 
     return (
         <div className="page-container">
@@ -56,7 +56,7 @@ export default function ExercisePage() {
                 }}
             >
                 <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)}>
-                    ← Powrót
+                    ← Back
                 </button>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -71,15 +71,15 @@ export default function ExercisePage() {
                     >
                         INTONA
                     </div>
-                    <h1 style={{ margin: 0 }}>{item?.title ?? "Ćwiczenie"}</h1>
+                    <h1 style={{ margin: 0 }}>{item?.title ?? "Exercise"}</h1>
                 </div>
             </div>
 
             <div className="app-card" style={{ padding: "22px" }}>
-                <h3>Gotowy do rozpoczęcia?</h3>
+                <h3>Ready to start?</h3>
 
                 <p className="page-subtitle" style={{ marginBottom: "20px" }}>
-                    Po kliknięciu Start uruchomi się mikrofon i utwór — śpiewaj wzdłuż wyświetlanych nut.
+                    Once you click Start, your microphone and the track will begin — sing along with the notes shown.
                 </p>
 
                 <div style={{ display: "flex", justifyContent: "center" }}>
