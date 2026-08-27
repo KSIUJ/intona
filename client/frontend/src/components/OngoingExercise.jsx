@@ -40,7 +40,7 @@ export default function OngoingExercise() {
   const totalPitchFramesRef = useRef(0);
   const lastFrameTimeRef = useRef(null);
 
-  // Nuty do highwaya – dane sesji przekazane przez ExercisePage
+
   const notes = state.processed_data ?? [];
 
   const deleteExerciseAccess = async (log_id, exercise_access_token) => {

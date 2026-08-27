@@ -11,7 +11,6 @@ const COLOR_GRID_LINE = "rgba(124, 79, 224, 0.12)";
 const COLOR_TEXT_ACTIVE = "#18171a";
 const COLOR_TEXT_UPCOMING = "#666168";
 
-// Progi w centach: <=15 czysto, <=35 blisko, powyżej nieczysto
 function accuracyColor(absCents) {
     if (absCents <= 15) return COLOR_CLEAN;
     if (absCents <= 35) return COLOR_CLOSE;
