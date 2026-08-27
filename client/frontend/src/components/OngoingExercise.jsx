@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import useAudio from "../hooks/useAudio";
 import { usePitchDetection } from "../hooks/usePitchDetection";
+import NoteHighway from "../components/NoteHighway";
 
 const ENDING_STATUS = {
   ONGOING: "Ongoing",
@@ -12,6 +13,7 @@ const ENDING_STATUS = {
 };
 
 export default function OngoingExercise() {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location_data = useLocation();
   const { state } = location_data;
@@ -33,30 +35,26 @@ export default function OngoingExercise() {
   const [average_deviation, setAverageDeviation] = useState(0);
 
   const back_up_interval_id = useRef(0);
-
   const deviationSamplesRef = useRef([]);
   const timeInTuneFramesRef = useRef(0);
   const totalPitchFramesRef = useRef(0);
   const lastFrameTimeRef = useRef(null);
 
-  const deleteExerciseAccess = async (
-    log_id,
-    exercise_access_token
-  ) => {
-    const api_response = await fetch(
-      `/api/exercises/${log_id}/end`,
-      {
-        method: "DELETE",
-        credentials: "include",
-        headers: {
-          "content-type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          secret_exercise_token: exercise_access_token,
-        }),
-      }
-    );
+  // Nuty do highwaya – dane sesji przekazane przez ExercisePage
+  const notes = state.processed_data ?? [];
+
+  const deleteExerciseAccess = async (log_id, exercise_access_token) => {
+    const api_response = await fetch(`/api/exercises/${log_id}/end`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        secret_exercise_token: exercise_access_token,
+      }),
+    });
 
     if (!api_response.ok) {
       const errorText = await api_response.text();
@@ -75,23 +73,20 @@ export default function OngoingExercise() {
     average_deviation,
     exercise_end_status
   ) => {
-    const api_response = await fetch(
-      `/api/exercises/${log_id}/end`,
-      {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "content-type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          exercise_duration,
-          time_in_tune,
-          average_deviation,
-          exercise_end_status,
-        }),
-      }
-    );
+    const api_response = await fetch(`/api/exercises/${log_id}/end`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        exercise_duration,
+        time_in_tune,
+        average_deviation,
+        exercise_end_status,
+      }),
+    });
 
     if (!api_response.ok) {
       const errorText = await api_response.text();
@@ -116,6 +111,7 @@ export default function OngoingExercise() {
       ),
     onSuccess() {
       console.log("successfully ended exercise");
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       navigate("/");
     },
     onError(error) {
@@ -127,10 +123,7 @@ export default function OngoingExercise() {
 
   const mutateDelete = useMutation({
     mutationFn: (variables) =>
-      deleteExerciseAccess(
-        variables.log_id,
-        variables.exercise_access_token
-      ),
+      deleteExerciseAccess(variables.log_id, variables.exercise_access_token),
     onSuccess(data, variables) {
       mutateEnd.mutate({
         log_id: variables.log_id,
@@ -153,7 +146,6 @@ export default function OngoingExercise() {
     exercise_end_status
   ) => {
     stopMicrophone();
-
     localStorage.clear();
 
     if (back_up_interval_id.current) {
@@ -162,17 +154,13 @@ export default function OngoingExercise() {
 
     const finalAverageDeviation =
       deviationSamplesRef.current.length > 0
-        ? deviationSamplesRef.current.reduce(
-            (sum, value) => sum + value,
-            0
-          ) / deviationSamplesRef.current.length
+        ? deviationSamplesRef.current.reduce((sum, value) => sum + value, 0) /
+          deviationSamplesRef.current.length
         : 0;
 
     const finalTimeInTune =
       totalPitchFramesRef.current > 0
-        ? (timeInTuneFramesRef.current /
-            totalPitchFramesRef.current) *
-          100
+        ? (timeInTuneFramesRef.current / totalPitchFramesRef.current) * 100
         : 0;
 
     mutateDelete.mutate({
@@ -187,7 +175,6 @@ export default function OngoingExercise() {
 
   const handleKeyDownEvent = (event) => {
     const key = event.code;
-
     if (key === "Space") {
       event.preventDefault();
       audio.Toggle();
@@ -195,7 +182,7 @@ export default function OngoingExercise() {
   };
 
   const handleMouseWheelEvent = (event) => {
-    audio.ChangeVolume(event.wheelDeltaY);
+    audio.ChangeVolume(-event.deltaY);
   };
 
   const onSongEnd = () => {
@@ -209,34 +196,23 @@ export default function OngoingExercise() {
 
   useEffect(() => {
     startMicrophone();
-
     return () => {
       stopMicrophone();
     };
   }, [startMicrophone, stopMicrophone]);
 
   useEffect(() => {
-    if (
-      cents === null ||
-      clarity < 0.9 ||
-      !Number.isFinite(frequency)
-    ) {
+    if (cents === null || clarity < 0.9 || !Number.isFinite(frequency)) {
       return;
     }
 
     const now = performance.now();
-
-    if (
-      lastFrameTimeRef.current &&
-      now - lastFrameTimeRef.current < 80
-    ) {
+    if (lastFrameTimeRef.current && now - lastFrameTimeRef.current < 80) {
       return;
     }
-
     lastFrameTimeRef.current = now;
 
     const absoluteDeviation = Math.abs(cents);
-
     deviationSamplesRef.current.push(absoluteDeviation);
     totalPitchFramesRef.current += 1;
 
@@ -245,15 +221,11 @@ export default function OngoingExercise() {
     }
 
     const currentAverage =
-      deviationSamplesRef.current.reduce(
-        (sum, value) => sum + value,
-        0
-      ) / deviationSamplesRef.current.length;
+      deviationSamplesRef.current.reduce((sum, value) => sum + value, 0) /
+      deviationSamplesRef.current.length;
 
     const currentTimeInTune =
-      (timeInTuneFramesRef.current /
-        totalPitchFramesRef.current) *
-      100;
+      (timeInTuneFramesRef.current / totalPitchFramesRef.current) * 100;
 
     setAverageDeviation(currentAverage);
     setTimeInTune(currentTimeInTune);
@@ -264,41 +236,30 @@ export default function OngoingExercise() {
       clearInterval(back_up_interval_id.current);
     }
 
-    const exercise_access_token = localStorage.getItem(
-      "exercise_access_token"
-    );
+    const exercise_access_token = localStorage.getItem("exercise_access_token");
 
     if (exercise_access_token !== null) {
       if (localStorage.getItem("time") !== null) {
-        audio.time.current = parseFloat(
-          localStorage.getItem("time")
-        );
+        audio.setTime(parseFloat(localStorage.getItem("time")));
       } else {
-        audio.time.current = 0;
+        audio.setTime(0);
       }
 
       const storedAverageDeviation = parseFloat(
         localStorage.getItem("average_deviation")
       );
-
-      const storedTimeInTune = parseFloat(
-        localStorage.getItem("time_in_tune")
-      );
+      const storedTimeInTune = parseFloat(localStorage.getItem("time_in_tune"));
 
       if (Number.isFinite(storedAverageDeviation)) {
         setAverageDeviation(storedAverageDeviation);
       }
-
       if (Number.isFinite(storedTimeInTune)) {
         setTimeInTune(storedTimeInTune);
       }
 
       audio.FastForward(audio.time.current / 1000);
     } else {
-      localStorage.setItem(
-        "exercise_access_token",
-        state.exercise_access_token
-      );
+      localStorage.setItem("exercise_access_token", state.exercise_access_token);
       localStorage.setItem("time", "0");
       localStorage.setItem("average_deviation", "0");
       localStorage.setItem("time_in_tune", "0");
@@ -307,97 +268,44 @@ export default function OngoingExercise() {
     audio.hasEndedEventEmitter.current.on("end", onSongEnd);
 
     back_up_interval_id.current = setInterval(() => {
-      localStorage.setItem(
-        "time",
-        `${audio.time.current.toFixed(2)}`
-      );
-
-      localStorage.setItem(
-        "average_deviation",
-        `${average_deviation.toFixed(2)}`
-      );
-
-      localStorage.setItem(
-        "time_in_tune",
-        `${time_in_tune.toFixed(2)}`
-      );
+      localStorage.setItem("time", `${audio.time.current.toFixed(2)}`);
+      localStorage.setItem("average_deviation", `${average_deviation.toFixed(2)}`);
+      localStorage.setItem("time_in_tune", `${time_in_tune.toFixed(2)}`);
     }, 5000);
 
     window.addEventListener("keydown", handleKeyDownEvent);
     window.addEventListener("wheel", handleMouseWheelEvent);
 
     return () => {
-      window.removeEventListener(
-        "keydown",
-        handleKeyDownEvent
-      );
-
-      window.removeEventListener(
-        "wheel",
-        handleMouseWheelEvent
-      );
+      window.removeEventListener("keydown", handleKeyDownEvent);
+      window.removeEventListener("wheel", handleMouseWheelEvent);
 
       if (back_up_interval_id.current) {
         clearInterval(back_up_interval_id.current);
       }
 
-      audio.hasEndedEventEmitter.current.off(
-        "end",
-        onSongEnd
-      );
+      audio.hasEndedEventEmitter.current.off("end", onSongEnd);
     };
   }, []);
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        padding: "32px",
-        maxWidth: "900px",
-        margin: "0 auto",
-        fontFamily: "sans-serif",
-      }}
-    >
-      <header style={{ marginBottom: "32px" }}>
-        <h1 style={{ marginBottom: "8px" }}>
-          Exercise
-        </h1>
-
-        <p style={{ margin: 0 }}>
+    <main className="page-container">
+      <header className="page-header">
+        <h1>Exercise</h1>
+        <p className="page-subtitle">
           Sing along and keep your pitch as close to the target note as possible.
         </p>
       </header>
 
-      <section
-        style={{
-          padding: "24px",
-          border: "1px solid #ddd",
-          borderRadius: "12px",
-          marginBottom: "24px",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            gap: "12px",
-            flexWrap: "wrap",
-            marginBottom: "24px",
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => audio.Toggle()}
-            style={{
-              padding: "12px 24px",
-              fontSize: "16px",
-              cursor: "pointer",
-            }}
-          >
-            Start / Pause
+      <section className="app-card" style={{ padding: "24px", marginBottom: "24px" }}>
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "24px" }}>
+          <button type="button" className="btn btn-primary" onClick={() => audio.Toggle()}>
+            {audio.isPlaying ? "Pause" : "Start"}
           </button>
 
           <button
             type="button"
+            className="btn btn-secondary"
             onClick={() =>
               handleEndOfExercise(
                 state.log_id,
@@ -406,22 +314,16 @@ export default function OngoingExercise() {
                 ENDING_STATUS.STOPPED
               )
             }
-            style={{
-              padding: "12px 24px",
-              fontSize: "16px",
-              cursor: "pointer",
-            }}
           >
             Stop exercise
           </button>
         </div>
 
-        <div>
+        <NoteHighway notes={notes} audioRef={audio.audioRef} cents={cents} />
+
+        <div style={{ marginTop: "20px" }}>
           <p>
-            Microphone:{" "}
-            <strong>
-              {isListening ? "active" : "inactive"}
-            </strong>
+            Microphone: <strong>{isListening ? "active" : "inactive"}</strong>
           </p>
 
           {error && <p>{error}</p>}
@@ -431,53 +333,29 @@ export default function OngoingExercise() {
           </p>
 
           <p>
-            Frequency:{" "}
-            <strong>
-              {frequency
-                ? `${frequency.toFixed(2)} Hz`
-                : "-"}
-            </strong>
+            Frequency: <strong>{frequency ? `${frequency.toFixed(2)} Hz` : "-"}</strong>
           </p>
 
           <p>
             Deviation:{" "}
-            <strong>
-              {cents !== null
-                ? `${cents > 0 ? "+" : ""}${cents} cents`
-                : "-"}
-            </strong>
+            <strong>{cents !== null ? `${cents > 0 ? "+" : ""}${cents} cents` : "-"}</strong>
           </p>
 
           <p>
-            Clarity:{" "}
-            <strong>{clarity.toFixed(2)}</strong>
+            Clarity: <strong>{clarity.toFixed(2)}</strong>
           </p>
         </div>
       </section>
 
-      <section
-        style={{
-          padding: "24px",
-          border: "1px solid #ddd",
-          borderRadius: "12px",
-        }}
-      >
-        <h2 style={{ marginTop: 0 }}>
-          Live results
-        </h2>
+      <section className="app-card" style={{ padding: "24px" }}>
+        <h2>Live results</h2>
 
         <p>
-          Average deviation:{" "}
-          <strong>
-            {average_deviation.toFixed(2)} cents
-          </strong>
+          Average deviation: <strong>{average_deviation.toFixed(2)} cents</strong>
         </p>
 
         <p>
-          Time in tune:{" "}
-          <strong>
-            {time_in_tune.toFixed(1)}%
-          </strong>
+          Time in tune: <strong>{time_in_tune.toFixed(1)}%</strong>
         </p>
       </section>
     </main>
