@@ -45,9 +45,11 @@ const CarouselSkeleton = () => {
 
     return (
         <section className="carousel-section">
-            <header className="carousel-header">
-                <h2 className="carousel-title"></h2>
-            </header>
+            <section className="header-layout" style={{justifyContent: 'center'}}>
+                <header className="carousel-header">
+                    <h2 className="carousel-title"></h2>
+                </header>
+            </section>
             <div className="carousel-body">
                 <button className="carousel-arrow carousel-arrow-left">
                     ‹

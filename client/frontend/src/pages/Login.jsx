@@ -21,6 +21,7 @@ const Login = () => {
         mutationFn: (formData) => getToken(formData),
         onSuccess() {
             queryClient.invalidateQueries({queryKey: ["logged_check"]})
+            queryClient.invalidateQueries({queryKey: ["settings", "carousel", "me"]})
             navigate("/dashboard")
         }
     })

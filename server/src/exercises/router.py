@@ -225,15 +225,20 @@ async def start_exercise(exercise_id: int, user: CurrentUser, db: SessionDep):
     exercise = exercise.first()
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")
-    presigned_url = bucket_client.generate_presigned_url(
+    piano_presigned_url = bucket_client.generate_presigned_url(
         "get_object",
-        Params={"Bucket": settings.bucket_name, "Key": f"exercise/{exercise_id}/vocal.wav"},
+        Params={"Bucket": settings.bucket_name, "Key": f"exercises/{exercise_id}/audio.mp3"},
+        ExpiresIn=3600,
+    )
+    source_presigned_url = bucket_client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": settings.bucket_name, "Key": f"exercises/{exercise_id}/source.musicxml"},
         ExpiresIn=3600,
     )
 
-    processed_song_array = bucket_client.get_object(
-        Bucket=settings.bucket_name, Key=f"exercise/{exercise_id}/results.json")
-    processed_data = json.loads(bytearray(processed_song_array["Body"].read()))
+    # processed_song_array = bucket_client.get_object(
+    #     Bucket=settings.bucket_name, Key=f"exercise/{exercise_id}/results.json")
+    # processed_data = json.loads(bytearray(processed_song_array["Body"].read()))
 
     exercise_log = ExerciseLogs(exercise_id=exercise.id, exercise_duration=exercise.exercise_duration, time_in_tune=0,
                                 average_deviation=0, attempted_at=datetime.now(UTC), ended_at=None,
@@ -253,7 +258,7 @@ async def start_exercise(exercise_id: int, user: CurrentUser, db: SessionDep):
 
     logging.info("no problem with starting exercise")
 
-    return {"presigned_url": presigned_url, "processed_data": processed_data, "log_id": exercise_log.id,
+    return {"piano_presigned_url": piano_presigned_url, "source_presigned_url": source_presigned_url, "log_id": exercise_log.id,
             "exercise_access_token": secret_token}
 
 
