@@ -27,7 +27,9 @@ export default function ExercisePage() {
 
     const {data: item, isLoading, isError} = useQuery({
         queryKey: ["exercise", id],
-        queryFn: () => getData(id)
+        queryFn: () => getData(id),
+        staleTime: Infinity,
+        refetchOnWindowFocus: false
     });
 
 
