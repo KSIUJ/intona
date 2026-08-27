@@ -16,7 +16,8 @@ export default function ExercisePage() {
             throw new Error(`Error loading exercise ${api_text}`);
         }
 
-        return api_response.json();
+        const api_response_json = await api_response.json()
+        return api_response_json
     };
 
     const { data: item, isLoading, isError } = useQuery({
@@ -28,10 +29,10 @@ export default function ExercisePage() {
 
     const handleStart = () => {
         if (!item) return;
-
-        navigate(`/exercises/${item.id}/${item.exercise_slug}/start`, {
+        navigate(`/exercises/${id}/${exercise_slug}/start`, {
             state: {
-                presigned_url: item.presigned_url,
+                piano_presigned_url: item.piano_presigned_url,
+                source_presigned_url: item.source_presigned_url,
                 processed_data: item.processed_data,
                 log_id: item.log_id,
                 exercise_access_token: item.exercise_access_token,

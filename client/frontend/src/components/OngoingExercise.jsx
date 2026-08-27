@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import useAudio from "../hooks/useAudio";
 import { usePitchDetection } from "../hooks/usePitchDetection";
 import NoteHighway from "../components/NoteHighway";
+import ScoreViewer from "../components/ScoreViewer";
 
 const ENDING_STATUS = {
   ONGOING: "Ongoing",
@@ -18,7 +19,8 @@ export default function OngoingExercise() {
   const location_data = useLocation();
   const { state } = location_data;
 
-  const audio = useAudio(state.presigned_url);
+  // Audio (fortepian) gra z piano_presigned_url - osobny link od pliku z nutami
+  const audio = useAudio(state.piano_presigned_url);
 
   const {
     frequency,
@@ -34,14 +36,14 @@ export default function OngoingExercise() {
   const [time_in_tune, setTimeInTune] = useState(0);
   const [average_deviation, setAverageDeviation] = useState(0);
 
+  // Nuty parsowane po stronie przegladarki z pliku MusicXML (source_presigned_url)
+  const [notes, setNotes] = useState([]);
+
   const back_up_interval_id = useRef(0);
   const deviationSamplesRef = useRef([]);
   const timeInTuneFramesRef = useRef(0);
   const totalPitchFramesRef = useRef(0);
   const lastFrameTimeRef = useRef(null);
-
-
-  const notes = state.processed_data ?? [];
 
   const deleteExerciseAccess = async (log_id, exercise_access_token) => {
     const api_response = await fetch(`/api/exercises/${log_id}/end`, {
@@ -319,7 +321,7 @@ export default function OngoingExercise() {
           </button>
         </div>
 
-        <NoteHighway notes={notes} audioRef={audio.audioRef} cents={cents} />
+        <NoteHighway musicXmlUrl={state.source_presigned_url} audioRef={audio.audioRef} />
 
         <div style={{ marginTop: "20px" }}>
           <p>

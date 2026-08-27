@@ -1,37 +1,51 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
+import { extractNotesFromOSMD } from "../utils/extractNotesFromOSMD";
 
 // Kolory zgodne z :root w index.css
 const COLOR_PRIMARY = "#7c4fe0";
-const COLOR_UPCOMING = "#e1dee5";
-const COLOR_UPCOMING_PAST_UNKNOWN = "#c9c4d6";
-const COLOR_CLEAN = "#16a34a";
-const COLOR_CLOSE = "#f59e0b";
-const COLOR_OFF = "#dc2626";
-const COLOR_GRID_LINE = "rgba(124, 79, 224, 0.12)";
-const COLOR_TEXT_ACTIVE = "#18171a";
-const COLOR_TEXT_UPCOMING = "#666168";
+const COLOR_BORDER = "rgba(124, 79, 224, 0.25)";
+const COLOR_TEXT = "#18171a";
 
-function accuracyColor(absCents) {
-    if (absCents <= 15) return COLOR_CLEAN;
-    if (absCents <= 35) return COLOR_CLOSE;
-    return COLOR_OFF;
-}
-
-export default function NoteHighway({ notes, audioRef, cents = null }) {
+export default function NoteHighway({ musicXmlUrl, audioRef }) {
     const canvasRef = useRef(null);
-    const centsRef = useRef(cents);
-    const accuracyRef = useRef(new Map()); // noteIndex -> { sum, count }
+    const hiddenOsmdContainerRef = useRef(null);
+    const [notes, setNotes] = useState([]);
+    const [loadError, setLoadError] = useState(null);
 
+    // Krok 1: pobierz i sparsuj MusicXML, zeby dostac liste nut
     useEffect(() => {
-        centsRef.current = cents;
-    }, [cents]);
+        if (!musicXmlUrl || !hiddenOsmdContainerRef.current) return;
 
-    function mapPitchToY(halfTone, minHalfTone, maxHalfTone, topY, bottomY) {
-        if (maxHalfTone === minHalfTone) return (topY + bottomY) / 2;
-        const proportion = (halfTone - minHalfTone) / (maxHalfTone - minHalfTone);
-        return bottomY - proportion * (bottomY - topY);
-    }
+        let isCancelled = false;
+        hiddenOsmdContainerRef.current.innerHTML = "";
 
+        const osmd = new OpenSheetMusicDisplay(hiddenOsmdContainerRef.current, {
+            backend: "svg",
+            drawTitle: false,
+        });
+
+        osmd
+            .load(musicXmlUrl)
+            .then(() => {
+                if (isCancelled) return;
+                osmd.render();
+                const extractedNotes = extractNotesFromOSMD(osmd);
+                console.log("NoteHighway: wyciagniete nuty", extractedNotes);
+                setNotes(extractedNotes);
+            })
+            .catch((error) => {
+                if (isCancelled) return;
+                console.error("NoteHighway: blad wczytywania nut", error);
+                setLoadError(error.message ?? "Nie udalo sie wczytac nut.");
+            });
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [musicXmlUrl]);
+
+    // Krok 2: rysuj stylizowane prostokaty z tekstem nad nutami, bez kolorowania wg cents
     useEffect(() => {
         if (!canvasRef.current) return;
         if (!notes || notes.length === 0) return;
@@ -49,66 +63,35 @@ export default function NoteHighway({ notes, audioRef, cents = null }) {
         const halfTones = notes.map((note) => note.halfTone);
         const minHalfTone = Math.min(...halfTones);
         const maxHalfTone = Math.max(...halfTones);
-        const uniqueHalfTones = [...new Set(halfTones)];
+
+        function mapPitchToY(halfTone) {
+            if (maxHalfTone === minHalfTone) return (topY + bottomY) / 2;
+            const proportion = (halfTone - minHalfTone) / (maxHalfTone - minHalfTone);
+            return bottomY - proportion * (bottomY - topY);
+        }
 
         function draw() {
-            const elapsedSeconds = audioRef.current?.currentTime ?? 0;
+            const elapsedSeconds = audioRef?.current?.currentTime ?? 0;
 
             context.clearRect(0, 0, canvas.width, canvas.height);
 
-            context.strokeStyle = COLOR_GRID_LINE;
-            context.lineWidth = 1;
-            uniqueHalfTones.forEach((halfTone) => {
-                const y = mapPitchToY(halfTone, minHalfTone, maxHalfTone, topY, bottomY) + 10;
-                context.beginPath();
-                context.moveTo(0, y);
-                context.lineTo(canvas.width, y);
-                context.stroke();
-            });
-
             for (let i = 0; i < notes.length; i++) {
                 const note = notes[i];
-                const noteStart = note.startTimeSeconds;
-                const noteEnd = noteStart + note.durationSeconds;
-                const noteX = playheadX + (noteStart - elapsedSeconds) * pixelsPerSecond;
+                const noteEnd = note.startTimeSeconds + note.durationSeconds;
+                const noteX = playheadX + (note.startTimeSeconds - elapsedSeconds) * pixelsPerSecond;
                 const noteWidth = note.durationSeconds * pixelsPerSecond;
-                const y = mapPitchToY(note.halfTone, minHalfTone, maxHalfTone, topY, bottomY);
+                const y = mapPitchToY(note.halfTone);
 
-                const isActive = elapsedSeconds >= noteStart && elapsedSeconds <= noteEnd;
-                const isPast = elapsedSeconds > noteEnd;
-                const currentCents = centsRef.current;
-
-                if (isActive && currentCents !== null && currentCents !== undefined) {
-                    const record = accuracyRef.current.get(i) ?? { sum: 0, count: 0 };
-                    record.sum += Math.abs(currentCents);
-                    record.count += 1;
-                    accuracyRef.current.set(i, record);
-                }
-
-                let fillColor = COLOR_UPCOMING;
-                let strokeColor = "rgba(124, 79, 224, 0.25)";
-
-                if (isActive) {
-                    fillColor =
-                        currentCents !== null && currentCents !== undefined
-                            ? accuracyColor(Math.abs(currentCents))
-                            : COLOR_PRIMARY;
-                } else if (isPast) {
-                    const record = accuracyRef.current.get(i);
-                    fillColor =
-                        record && record.count > 0
-                            ? accuracyColor(record.sum / record.count)
-                            : COLOR_UPCOMING_PAST_UNKNOWN;
-                }
+                const isActive = elapsedSeconds >= note.startTimeSeconds && elapsedSeconds <= noteEnd;
 
                 context.save();
                 if (isActive) {
-                    context.shadowColor = fillColor;
+                    context.shadowColor = COLOR_PRIMARY;
                     context.shadowBlur = 14;
                 }
 
-                context.fillStyle = fillColor;
-                context.strokeStyle = strokeColor;
+                context.fillStyle = COLOR_PRIMARY;
+                context.strokeStyle = COLOR_BORDER;
                 context.lineWidth = 1;
                 context.beginPath();
                 context.roundRect(noteX, y, noteWidth, 20, 6);
@@ -118,7 +101,7 @@ export default function NoteHighway({ notes, audioRef, cents = null }) {
 
                 const label = note.lyricText ?? "";
                 if (label && label.trim() !== "") {
-                    context.fillStyle = isActive ? COLOR_TEXT_ACTIVE : COLOR_TEXT_UPCOMING;
+                    context.fillStyle = COLOR_TEXT;
                     context.font = isActive ? "bold 13px Inter, sans-serif" : "13px Inter, sans-serif";
                     context.textAlign = "center";
                     context.textBaseline = "bottom";
@@ -146,19 +129,26 @@ export default function NoteHighway({ notes, audioRef, cents = null }) {
     }, [notes, audioRef]);
 
     return (
-        <canvas
-            ref={canvasRef}
-            width={800}
-            height={200}
-            className="app-card"
-            style={{
-                width: "100%",
-                maxWidth: "800px",
-                height: "auto",
-                aspectRatio: "800 / 200",
-                borderRadius: "var(--radius-medium)",
-                display: "block",
-            }}
-        />
+        <div>
+            {loadError && <p style={{ color: "red" }}>Błąd: {loadError}</p>}
+
+            {/* Ukryty kontener, ktorego uzywa OSMD wewnetrznie do parsowania */}
+            <div ref={hiddenOsmdContainerRef} style={{ display: "none" }} />
+
+            <canvas
+                ref={canvasRef}
+                width={800}
+                height={200}
+                className="app-card"
+                style={{
+                    width: "100%",
+                    maxWidth: "800px",
+                    height: "auto",
+                    aspectRatio: "800 / 200",
+                    borderRadius: "var(--radius-medium)",
+                    display: "block",
+                }}
+            />
+        </div>
     );
 }

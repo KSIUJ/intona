@@ -14,6 +14,7 @@ export default function useAudio(presigned_url) {
     };
 
     useEffect(() => {
+        console.log(`Presigned url: ${presigned_url}`)
         const handleEndEvent = () => {
             hasEndedEventEmitter.current.emit("end");
             audio.current.pause();
@@ -76,8 +77,7 @@ export default function useAudio(presigned_url) {
         setPlaying(false);
     }
 
-    // Toggle woła Start/Stop bezpośrednio w reakcji na klik,
-    // żeby przeglądarka uznała play() za bezpośredni gest użytkownika.
+
     async function Toggle() {
         if (isPlaying) {
             Stop();
