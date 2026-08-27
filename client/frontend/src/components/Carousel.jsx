@@ -221,138 +221,140 @@ const Carousel = ({info, setCarouselUpdating, setCarouselDelete}) => {
     }
     return (
         <section className="carousel-section">
-            <header className={`carousel-header filter-icon filter-trigger-btn ${isOpen ? 'active' : ''}`}
-                    onClick={() => setOpen(prev => !prev)}>
-                <h2 className="carousel-title"><FilterIcon/></h2>
-            </header>
-            {isOpen && (
-                <div className="filter-menu" style={{
-                    position: 'absolute',
-                    right: 0,
-                    zIndex: 10
+            <section className="header-layout">
+                <button className={`carousel-header delete-icon`} onClick={() => {
+                    setCarouselDelete(info.id)
                 }}>
+                    <h2 className="carousel-title"><TrashIcon/></h2>
+                </button>
+                <header className="carousel-header">
+                    <input
+                        type="text"
+                        className="carousel-title"
+                        defaultValue={exerciseName}
+                        value={exerciseName}
+                        onChange={(e) => {
+                            const value = e.target.value
+                            setExerciseName(value)
 
-                    <div className="search-wrapper">
-                        <SearchIcon/>
-                        <input type="text" placeholder="Search by name..." value={workingSettingsArray.name}
-                               onChange={(e) =>
-                                   setWorkingSettingsArray((prev) => ({
-                                       ...prev,
-                                       name: e.target.value
-                                   }))}/>
-                    </div>
+                            if (timerIdRed.current !== 0) {
+                                clearTimeout(timerIdRed.current)
+                            }
 
-                    <div className="filter-group">
-                        <h3 className="section-title">Difficulty level</h3>
-                        <div className="row">
-                            <button
-                                className={`diff-btn btn-easy ${workingSettingsArray.difficulties["Easy"] ? "active" : ""}`}
-                                onClick={() =>
-                                    setWorkingSettingsArray((prev) => ({
-                                        ...prev,
-                                        difficulties: {
-                                            "Easy": !prev.difficulties["Easy"],
-                                            "Medium": prev.difficulties["Medium"],
-                                            "Hard": prev.difficulties["Hard"]
-                                        }
-                                    }))}>EASY
-                            </button>
-                            <button
-                                className={`diff-btn btn-med ${workingSettingsArray.difficulties["Medium"] ? "active" : ""}`}
-                                onClick={() =>
-                                    setWorkingSettingsArray((prev) => ({
-                                        ...prev,
-                                        difficulties: {
-                                            "Easy": prev.difficulties["Easy"],
-                                            "Medium": !prev.difficulties["Medium"],
-                                            "Hard": prev.difficulties["Hard"]
-                                        }
-                                    }))}>MED
-                            </button>
-                            <button
-                                className={`diff-btn btn-hard ${workingSettingsArray.difficulties["Hard"] ? "active" : ""}`}
-                                onClick={() =>
-                                    setWorkingSettingsArray((prev) => ({
-                                        ...prev,
-                                        difficulties: {
-                                            "Easy": prev.difficulties["Easy"],
-                                            "Medium": prev.difficulties["Medium"],
-                                            "Hard": !prev.difficulties["Hard"]
-                                        }
-                                    }))}>HARD
-                            </button>
-                        </div>
-                    </div>
+                            timerIdRed.current = setTimeout(() => {
+                                info.exercise_name = value
+                                setCarouselUpdating(info)
+                                clearTimeout(timerIdRed.current)
+                            }, 1000)
 
-                    <div className="filter-group">
-                        <h3 className="section-title">Rating (%)</h3>
-                        <div className="row">
-                            <input type="number" className="rating-input" placeholder="From"
-                                   value={workingSettingsArray.rating[0]}
+
+                        }}
+                    />
+                </header>
+                <header className={`carousel-header filter-icon filter-trigger-btn ${isOpen ? 'active' : ''}`}
+                        onClick={() => setOpen(prev => !prev)}>
+                    <h2 className="carousel-title"><FilterIcon/></h2>
+                </header>
+                {isOpen && (
+                    <div className="filter-menu" style={{
+                        position: 'absolute',
+                        right: 0,
+                        zIndex: 10
+                    }}>
+
+                        <div className="search-wrapper">
+                            <SearchIcon/>
+                            <input type="text" placeholder="Search by name..." value={workingSettingsArray.name}
                                    onChange={(e) =>
                                        setWorkingSettingsArray((prev) => ({
                                            ...prev,
-                                           rating: [e.target.value !== '' ? parseInt(e.target.value) > 100 ? 100 : parseInt(e.target.value) : 0, prev.rating[1]]
-                                       }))}/>
-                            <span className="rating-separator">—</span>
-                            <input type="number" className="rating-input" placeholder="To"
-                                   value={workingSettingsArray.rating[1]}
-                                   onChange={(e) =>
-                                       setWorkingSettingsArray((prev) => ({
-                                           ...prev,
-                                           rating: [prev.rating[0], e.target.value !== '' ? parseInt(e.target.value) > 100 ? 100 : parseInt(e.target.value) : 0]
+                                           name: e.target.value
                                        }))}/>
                         </div>
+
+                        <div className="filter-group">
+                            <h3 className="section-title">Difficulty level</h3>
+                            <div className="row">
+                                <button
+                                    className={`diff-btn btn-easy ${workingSettingsArray.difficulties["Easy"] ? "active" : ""}`}
+                                    onClick={() =>
+                                        setWorkingSettingsArray((prev) => ({
+                                            ...prev,
+                                            difficulties: {
+                                                "Easy": !prev.difficulties["Easy"],
+                                                "Medium": prev.difficulties["Medium"],
+                                                "Hard": prev.difficulties["Hard"]
+                                            }
+                                        }))}>EASY
+                                </button>
+                                <button
+                                    className={`diff-btn btn-med ${workingSettingsArray.difficulties["Medium"] ? "active" : ""}`}
+                                    onClick={() =>
+                                        setWorkingSettingsArray((prev) => ({
+                                            ...prev,
+                                            difficulties: {
+                                                "Easy": prev.difficulties["Easy"],
+                                                "Medium": !prev.difficulties["Medium"],
+                                                "Hard": prev.difficulties["Hard"]
+                                            }
+                                        }))}>MED
+                                </button>
+                                <button
+                                    className={`diff-btn btn-hard ${workingSettingsArray.difficulties["Hard"] ? "active" : ""}`}
+                                    onClick={() =>
+                                        setWorkingSettingsArray((prev) => ({
+                                            ...prev,
+                                            difficulties: {
+                                                "Easy": prev.difficulties["Easy"],
+                                                "Medium": prev.difficulties["Medium"],
+                                                "Hard": !prev.difficulties["Hard"]
+                                            }
+                                        }))}>HARD
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="filter-group">
+                            <h3 className="section-title">Rating (%)</h3>
+                            <div className="row">
+                                <input type="number" className="rating-input" placeholder="From"
+                                       value={workingSettingsArray.rating[0]}
+                                       onChange={(e) =>
+                                           setWorkingSettingsArray((prev) => ({
+                                               ...prev,
+                                               rating: [e.target.value !== '' ? parseInt(e.target.value) > 100 ? 100 : parseInt(e.target.value) : 0, prev.rating[1]]
+                                           }))}/>
+                                <span className="rating-separator">—</span>
+                                <input type="number" className="rating-input" placeholder="To"
+                                       value={workingSettingsArray.rating[1]}
+                                       onChange={(e) =>
+                                           setWorkingSettingsArray((prev) => ({
+                                               ...prev,
+                                               rating: [prev.rating[0], e.target.value !== '' ? parseInt(e.target.value) > 100 ? 100 : parseInt(e.target.value) : 0]
+                                           }))}/>
+                            </div>
+                        </div>
+
+                        <div className="action-buttons">
+                            <button className="action-btn btn-cancel" onClick={() => {
+                                setWorkingSettingsArray(currentSettingsArray)
+                                setOpen(false)
+                            }}>Cancel
+                            </button>
+                            <button className="action-btn btn-ok" onClick={() => {
+                                info.filter = workingSettingsArray
+                                setCurrentSettingsArray(workingSettingsArray)
+                                setCarouselUpdating(info)
+                                setOpen(false)
+                            }}>OK
+                            </button>
+                        </div>
+
                     </div>
-
-                    <div className="action-buttons">
-                        <button className="action-btn btn-cancel" onClick={() => {
-                            setWorkingSettingsArray(currentSettingsArray)
-                            setOpen(false)
-                        }}>Cancel
-                        </button>
-                        <button className="action-btn btn-ok" onClick={() => {
-                            info.filter = workingSettingsArray
-                            setCurrentSettingsArray(workingSettingsArray)
-                            setCarouselUpdating(info)
-                            setOpen(false)
-                        }}>OK
-                        </button>
-                    </div>
-
-                </div>
-            )}
-
-            <button className={`carousel-header delete-icon`} onClick={() => {
-                setCarouselDelete(info.id)
-            }}>
-                <h2 className="carousel-title"><TrashIcon/></h2>
-            </button>
-
-            <header className="carousel-header">
-                <input
-                    type="text"
-                    className="carousel-title"
-                    defaultValue={exerciseName}
-                    value={exerciseName}
-                    onChange={(e) => {
-                        const value = e.target.value
-                        setExerciseName(value)
-
-                        if (timerIdRed.current !== 0) {
-                            clearTimeout(timerIdRed.current)
-                        }
-
-                        timerIdRed.current = setTimeout(() => {
-                            info.exercise_name = value
-                            setCarouselUpdating(info)
-                            clearTimeout(timerIdRed.current)
-                        }, 1000)
+                )}
 
 
-                    }}
-                />
-            </header>
+            </section>
             <div className="carousel-body">
                 <button className="carousel-arrow carousel-arrow-left" onClick={() => scrollByAmount(-1)}>
                     ‹
