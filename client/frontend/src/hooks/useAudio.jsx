@@ -76,8 +76,8 @@ export default function useAudio(presigned_url) {
         setPlaying(false);
     }
 
-    // Toggle woła Start/Stop bezpośrednio w reakcji na klik,
-    // żeby przeglądarka uznała play() za bezpośredni gest użytkownika.
+    // Toggle calls Start/Stop directly in response to a click,
+    // so the browser treats play() as a direct user gesture.
     async function Toggle() {
         if (isPlaying) {
             Stop();

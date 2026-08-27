@@ -30,11 +30,11 @@ export default function ScoreViewer({ musicXmlUrl, onNotesLoaded }) {
                 }
 
                 osmd.render();
-                console.log("Przykładowy VoiceEntry:", osmd.cursor.Iterator.CurrentVoiceEntries[0]);
+                console.log("Example VoiceEntry:", osmd.cursor.Iterator.CurrentVoiceEntries[0]);
                 const extractedNotes = extractNotesFromOSMD(osmd);
-                console.log("ScoreViewer: wyciągnięte nuty", extractedNotes);
+                console.log("ScoreViewer: extracted notes", extractedNotes);
                 onNotesLoaded?.(extractedNotes);
-                console.log("BPM z danych:", osmd.Sheet.DefaultStartTempoInBpm);
+                console.log("BPM from data:", osmd.Sheet.DefaultStartTempoInBpm);
                 
                 
             })
@@ -42,8 +42,8 @@ export default function ScoreViewer({ musicXmlUrl, onNotesLoaded }) {
                 if (isCancelled) {
                     return;
                 }
-                console.error("ScoreViewer: błąd wczytywania nut", error);
-                setLoadError(error.message ?? "Nie udało się wczytać nut.");
+                console.error("ScoreViewer: error loading notes", error);
+                setLoadError(error.message ?? "Failed to load the sheet music.");
             });
 
         return () => {
@@ -65,7 +65,7 @@ export default function ScoreViewer({ musicXmlUrl, onNotesLoaded }) {
 
     return (
         <div className="score-viewer">
-            {loadError && <p style={{ color: "red" }}>Błąd: {loadError}</p>}
+            {loadError && <p style={{ color: "red" }}>Error: {loadError}</p>}
             <div className="osmd-container" ref={osmdContainerRef}></div>
         </div>
     );
