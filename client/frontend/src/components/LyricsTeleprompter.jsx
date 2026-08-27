@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import {useEffect, useRef, useState} from "react";
 
-export default function LyricsTeleprompter({ notes, audioRef }) {
+export default function LyricsTeleprompter({notes, audioRef}) {
     const [activeIndex, setActiveIndex] = useState(-1);
     const wordRefs = useRef([]);
 
@@ -31,17 +31,17 @@ export default function LyricsTeleprompter({ notes, audioRef }) {
 
     return (
         <div
-    style={{
-        display: "flex",
-        gap: "10px",
-        overflowX: "hidden",
-        whiteSpace: "nowrap",
-        padding: "16px",
-        background: "white",
-        width: "100%",
-        boxSizing: "border-box",
-    }}
->
+            style={{
+                display: "flex",
+                gap: "10px",
+                overflowX: "hidden",
+                whiteSpace: "nowrap",
+                padding: "16px",
+                background: "white",
+                width: "100%",
+                boxSizing: "border-box",
+            }}
+        >
             {lyricNotes.map((note, index) => (
                 <span
                     key={index}

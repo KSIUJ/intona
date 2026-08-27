@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import "./Carousel.css";
-import {useRef} from "react";
+import {useEffect, useRef, useState} from "react";
 import {Link} from "react-router-dom";
 import Chip from '@mui/material/Chip';
 import Card from '@mui/material/Card';
@@ -9,33 +9,73 @@ import CardActionArea from '@mui/material/CardActionArea';
 import Typography from '@mui/material/Typography';
 import {useQuery} from "@tanstack/react-query";
 
-
-export let exercises = [
-    {id: 1, title: "G-major scale", slug: "g-major-scale", difficulty: "Easy", rating: "100%"},
-    {id: 2, title: "C-major scale", slug: "c-major-scale", difficulty: "Easy", rating: "100%"},
-    {id: 3, title: "F-major scale", slug: "f-major-scale", difficulty: "Easy", rating: "100%"},
-    {id: 4, title: "Intervals 2-3", slug: "intervals-2-3", difficulty: "Medium", rating: "90%"},
-    {id: 5, title: "Intervals 4-5", slug: "intervals-4-5", difficulty: "Medium", rating: "95%"},
-    {id: 6, title: "Intervals 6-7", slug: "intervals-6-7", difficulty: "Medium", rating: "97%"},
-    {id: 7, title: "Intervals 1-8", slug: "intervals-1-8", difficulty: "Hard", rating: "50%"},
-];
-export let songs = [
-    { id: 1, title: "Iris", slug: "Iris", difficulty: "Easy", rating: "100%",
-  musicXmlUrl: "/songs/Iris-voice.musicxml", audioUrl: "/songs/Iris-piano.mp3" },
-    {id: 2, title: "All of me", slug: "All of me", difficulty: "Easy", rating: "100%",
-        musicXmlUrl: "/songs/All_Of_Me.musicxml", audioUrl: "/songs/All_Of_Me.mp3"
-    },
-    {id: 3, title: "Song 3", slug: "song-3", difficulty: "Easy", rating: "100%"},
-    {id: 4, title: "Song 4", slug: "song-4", difficulty: "Medium", rating: "90%"},
-    {id: 5, title: "Song 5", slug: "song-5", difficulty: "Medium", rating: "95%"},
-    {id: 6, title: "Song 6", slug: "song-6", difficulty: "Medium", rating: "97%"},
-    {id: 7, title: "Song 7", slug: "song-7", difficulty: "Hard", rating: "50%"},
-];
 const difficultyColors = {
     Easy: "success",
     Medium: "warning",
     Hard: "error",
 };
+
+function FilterIcon() {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <circle cx="8" cy="6" r="2"/>
+            <line x1="3" y1="6" x2="6" y2="6"/>
+            <line x1="10" y1="6" x2="21" y2="6"/>
+
+            <circle cx="16" cy="12" r="2"/>
+            <line x1="3" y1="12" x2="14" y2="12"/>
+            <line x1="18" y1="12" x2="21" y2="12"/>
+
+            <circle cx="11" cy="18" r="2"/>
+            <line x1="3" y1="18" x2="9" y2="18"/>
+            <line x1="13" y1="18" x2="21" y2="18"/>
+        </svg>
+    );
+}
+
+function SearchIcon() {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+    );
+}
+
+function TrashIcon() {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <path
+                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>
+        </svg>
+    );
+}
 
 
 const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type, clickable}) => {
