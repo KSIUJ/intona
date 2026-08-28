@@ -259,7 +259,8 @@ const Carousel = ({info, setCarouselUpdating, setCarouselDelete}) => {
                     <div className="filter-menu" style={{
                         position: 'absolute',
                         right: 0,
-                        zIndex: 10
+                        zIndex: 10,
+                        top: '48px'
                     }}>
 
                         <div className="search-wrapper">

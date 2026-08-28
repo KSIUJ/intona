@@ -18,9 +18,6 @@
     border: none;
     color: white;
 
-    display: flex;
-    justify-content: center;
-    align-items: center;
     cursor: pointer;
 
     box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
@@ -54,9 +51,6 @@
 }
 
 .filter-trigger-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     background-color: transparent;
     border: none;
     padding: 8px;
@@ -313,17 +307,16 @@
     /*justify-content: center;*/
 
     .carousel-header {
-        justify-self: center;
         color: #fff;
         background-color: var(--color-primary);
         border: none;
         border-radius: 8px;
-        justify-content: center;
         width: 50%;
         height: 48px;
         font-size: 15px;
         font-weight: 600;
         display: flex;
+        flex-direction: column;
 
         .carousel-title {
             align-self: center;
