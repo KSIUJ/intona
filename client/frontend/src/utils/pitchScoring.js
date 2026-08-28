@@ -59,10 +59,14 @@ export function calculateCentsDeviation(
         return null;
     }
 
-    return (
-        1200 *
-        Math.log2(detectedFrequency / targetFrequency)
-    );
+    let cents = 1200 * Math.log2(detectedFrequency / targetFrequency);
+
+    // Zwijanie oktaw (Octave folding)
+    cents = cents % 1200;
+    if (cents > 600) cents -= 1200;
+    if (cents < -600) cents += 1200;
+
+    return cents;
 }
 
 /**
@@ -209,21 +213,9 @@ export function calculateNoteScore(
     pitchFrames,
     options = {}
 ) {
-    const {
-        minClarity = DEFAULT_MIN_CLARITY,
-        sigmaRatio = DEFAULT_SIGMA_RATIO
-    } = options;
+    const { minClarity = 0.9, sigmaRatio = 0.25, currentTime = null } = options;
 
-    if (!targetNote || !Array.isArray(pitchFrames)) {
-        return {
-            score: 0,
-            averageDeviation: null,
-            frameCount: 0,
-            validFrameCount: 0
-        };
-    }
-
-    if (targetNote.type !== "note") {
+    if (!targetNote || targetNote.type !== "note") {
         return {
             score: null,
             averageDeviation: null,
@@ -232,21 +224,13 @@ export function calculateNoteScore(
         };
     }
 
-    const startTime =
-        Number(targetNote.start_time_seconds);
-
-    const duration =
-        Number(targetNote.duration_seconds);
-
-    const targetFrequency =
-        Number(targetNote.frequency_hz);
-
-    const endTime =
-        startTime + duration;
+    const startTime = Number(targetNote.start_time_seconds);
+    const duration = Number(targetNote.duration_seconds);
+    const targetFrequency = Number(targetNote.frequency_hz);
+    const endTime = startTime + duration;
 
     if (
         !Number.isFinite(startTime) ||
-        !Number.isFinite(duration) ||
         duration <= 0 ||
         !Number.isFinite(targetFrequency) ||
         targetFrequency <= 0
@@ -259,118 +243,64 @@ export function calculateNoteScore(
         };
     }
 
-    const framesInsideNote =
-        pitchFrames.filter((frame) => {
-            const time =
-                Number(frame.time);
-
-            return (
-                Number.isFinite(time) &&
-                time >= startTime &&
-                time < endTime
-            );
-        });
-
-    if (framesInsideNote.length === 0) {
-        return {
-            score: 0,
-            averageDeviation: null,
-            frameCount: 0,
-            validFrameCount: 0
-        };
-    }
+    const framesInsideNote = pitchFrames.filter((frame) => {
+        const time = Number(frame.time);
+        return Number.isFinite(time) && time >= startTime && time < endTime;
+    });
 
     let weightedScoreSum = 0;
     let totalWeight = 0;
-
     let weightedDeviationSum = 0;
     let validDeviationWeight = 0;
-
     let validFrameCount = 0;
 
     for (const frame of framesInsideNote) {
-        const weight =
-            calculateGaussianWeight(
-                frame.time,
-                startTime,
-                duration,
-                sigmaRatio
-            );
-
-        if (weight <= 0) {
-            continue;
-        }
+        const weight = calculateGaussianWeight(frame.time, startTime, duration, sigmaRatio);
+        if (weight <= 0) continue;
 
         totalWeight += weight;
 
-        const frequency =
-            Number(frame.frequency);
+        const frequency = Number(frame.frequency);
+        const clarity = Number(frame.clarity ?? 0);
+        const isValidPitch = Number.isFinite(frequency) && frequency > 0 && clarity >= minClarity;
 
-        const clarity =
-            Number(frame.clarity ?? 0);
-
-        const isValidPitch =
-            Number.isFinite(frequency) &&
-            frequency > 0 &&
-            clarity >= minClarity;
-
-        if (!isValidPitch) {
-            // Missing / unclear pitch = 0 frame score.
-            // Weight still remains in totalWeight.
-            continue;
-        }
+        if (!isValidPitch) continue;
 
         validFrameCount += 1;
+        const centsDeviation = calculateCentsDeviation(frequency, targetFrequency);
+        const frameScore = calculateFrameScore(centsDeviation);
 
-        const centsDeviation =
-            calculateCentsDeviation(
-                frequency,
-                targetFrequency
-            );
+        weightedScoreSum += frameScore * weight;
 
-        const frameScore =
-            calculateFrameScore(
-                centsDeviation
-            );
-
-        weightedScoreSum +=
-            frameScore * weight;
-
-        if (
-            centsDeviation !== null &&
-            Number.isFinite(centsDeviation)
-        ) {
-            weightedDeviationSum +=
-                Math.abs(centsDeviation) * weight;
-
+        if (centsDeviation !== null && Number.isFinite(centsDeviation)) {
+            // Capping: Blokujemy drastyczne skoki odchylenia na maksymalnie 50 centach.
+            const cappedDeviation = Math.min(Math.abs(centsDeviation), 50);
+            weightedDeviationSum += cappedDeviation * weight;
             validDeviationWeight += weight;
         }
     }
 
-    const score =
-        totalWeight > 0
-            ? weightedScoreSum / totalWeight
-            : 0;
+    // Oczekujemy klatek tylko do momentu bieżącego czasu audio
+    const timeToEvaluate = currentTime !== null ? Math.min(currentTime, endTime) : endTime;
+    const elapsedDurationForNote = Math.max(0, timeToEvaluate - startTime);
 
-    const averageDeviation =
-        validDeviationWeight > 0
-            ? weightedDeviationSum /
-              validDeviationWeight
-            : null;
+    // ~80ms na klatkę z Pitchy
+    const expectedFrameCount = Math.floor(elapsedDurationForNote / 0.08);
+    const missingFrames = Math.max(0, expectedFrameCount - framesInsideNote.length);
+
+    if (missingFrames > 0) {
+        // Wypełniamy puste miejsca wagą z wynikiem 0
+        const averageExpectedWeight = 0.5;
+        totalWeight += (missingFrames * averageExpectedWeight);
+    }
+
+    const score = totalWeight > 0 ? weightedScoreSum / totalWeight : 0;
+    const averageDeviation = validDeviationWeight > 0 ? weightedDeviationSum / validDeviationWeight : null;
 
     return {
         score: Number(score.toFixed(2)),
-
-        averageDeviation:
-            averageDeviation === null
-                ? null
-                : Number(
-                    averageDeviation.toFixed(2)
-                ),
-
-        frameCount:
-            framesInsideNote.length,
-
+        averageDeviation: averageDeviation === null ? null : Number(averageDeviation.toFixed(2)),
+        frameCount: framesInsideNote.length,
         validFrameCount
     };
 }
