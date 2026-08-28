@@ -118,7 +118,7 @@ async def login_for_access_token(
     ```
     **HTTP STATUS 401** -> when username doesn't exist, or email doesn't exist
     """
-    remember_login = True if remember_login == "true" else False
+    remember_login = True if remember_login == "on" else False
     result = await db.exec(
         select(User).where(func.lower(User.email) == form_data.username.lower())
     )

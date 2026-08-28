@@ -3,7 +3,7 @@ import {useNavigate, useLocation, useParams} from "react-router-dom";
 import {useMutation, useQueryClient} from "@tanstack/react-query";
 
 import useAudio from "../hooks/useAudio";
-import {usePitchDetection} from "../hooks/usePitchDetection";
+import {usePitchDetection} from "../hooks/usePitchDetection.jsx";
 import NoteHighway from "../components/NoteHighway";
 import CentDeviationMeter from "./CentDeviationMeter.jsx";
 
@@ -24,11 +24,9 @@ export default function OngoingExercise() {
 
     const {
         frequency,
-        note,
         cents,
         clarity,
         isListening,
-        error,
         start: startMicrophone,
         stop: stopMicrophone,
     } = usePitchDetection();
