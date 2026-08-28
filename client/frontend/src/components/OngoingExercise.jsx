@@ -308,7 +308,7 @@ export default function OngoingExercise() {
                     Sing along and keep your pitch as close to the target note as possible.
                 </p>
             </header>
-            <section style={{display: 'flex', flexDirection: 'row', height: '560px'}}>
+            <section style={{display: 'flex', flexDirection: 'row', height: '560px'}} className={"ongoing"}>
                 <section className="app-card ongoing" style={{padding: "24px", marginBottom: "24px"}} >
                     <div style={{display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "24px"}}>
                         <button type="button" className="btn btn-primary" onClick={() => audio.Toggle.current()}>
