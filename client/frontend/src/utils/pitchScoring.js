@@ -1,28 +1,29 @@
-/**
- * Frontend pitch scoring for Intona.
- *
- * Scoring rules:
- * - reference notes come from results.json
- * - rests are ignored
- * - detected microphone frequency is compared with target frequency in cents
- * - frames near the middle of a target note have higher importance
- *   using a Gaussian time weight
- * - unclear / missing pitch frames count as 0 points
- */
-
 const DEFAULT_MIN_CLARITY = 0.9;
 const PERFECT_CENTS = 15;
 const MAX_CENTS_ERROR = 50;
 const DEFAULT_SIGMA_RATIO = 0.25;
 
-/**
- * Extracts target note entries from supported JSON shapes.
+/*
+ * Pitch detectors can sometimes lock onto a strong vocal harmonic
+ * instead of the fundamental frequency.
  *
- * Supported:
- * - direct array
- * - { notes: [...] }
- * - { "processed data": { notes: [...] } }
+ * The third and fifth harmonics are particularly common in voice.
+ * We only correct them when the corrected frequency is close enough
+ * to the expected target note.
+ *
+ * We intentionally do NOT correct the second harmonic, because that
+ * would incorrectly accept singing one octave above the target.
  */
+const HARMONIC_CANDIDATES = [3, 5];
+
+const MAX_HARMONIC_CORRECTION_CENTS = 120;
+
+const MIN_PLAUSIBLE_FUNDAMENTAL_HZ = 70;
+const MAX_PLAUSIBLE_FUNDAMENTAL_HZ = 1200;
+
+const MIN_FREQUENCY_FOR_HARMONIC_CHECK_HZ = 900;
+
+
 export function normalizeTargetNotes(data) {
     if (Array.isArray(data)) {
         return data;
@@ -32,253 +33,469 @@ export function normalizeTargetNotes(data) {
         return data.notes;
     }
 
-    if (Array.isArray(data?.["processed data"]?.notes)) {
+    if (
+        Array.isArray(
+            data?.["processed data"]?.notes
+        )
+    ) {
         return data["processed data"].notes;
     }
 
     return [];
 }
 
-/**
- * Difference between detected and target frequency in cents.
+
+function rawCentsDeviation(
+    detectedFrequency,
+    targetFrequency
+) {
+    return (
+        1200 *
+        Math.log2(
+            detectedFrequency /
+            targetFrequency
+        )
+    );
+}
+
+
+/*
+ * Correct a likely strong vocal harmonic.
  *
- * 0 cents  = exact pitch
- * positive = too high / sharp
- * negative = too low / flat
+ * Example:
+ *
+ * target:   440 Hz
+ * detected: 1320 Hz
+ *
+ * 1320 / 440 = 3
+ *
+ * Pitchy probably detected the third harmonic.
+ * We convert it back to 440 Hz before scoring.
+ *
+ * Important:
+ * we do not automatically fold octaves.
+ * 880 Hz for a 440 Hz target must remain wrong.
  */
-export function calculateCentsDeviation(
+export function normalizeDetectedFrequencyToTarget(
     detectedFrequency,
     targetFrequency
 ) {
     if (
-        !Number.isFinite(detectedFrequency) ||
-        !Number.isFinite(targetFrequency) ||
+        !Number.isFinite(
+            detectedFrequency
+        ) ||
+        !Number.isFinite(
+            targetFrequency
+        ) ||
         detectedFrequency <= 0 ||
         targetFrequency <= 0
     ) {
         return null;
     }
 
-    return (
-        1200 *
-        Math.log2(detectedFrequency / targetFrequency)
+    let bestFrequency =
+        detectedFrequency;
+
+    let bestDeviation =
+        Math.abs(
+            rawCentsDeviation(
+                detectedFrequency,
+                targetFrequency
+            )
+        );
+
+
+    /*
+     * Low frequencies are much more likely
+     * to already be the actual fundamental.
+     */
+    if (
+        detectedFrequency <
+        MIN_FREQUENCY_FOR_HARMONIC_CHECK_HZ
+    ) {
+        return bestFrequency;
+    }
+
+
+    for (
+        const harmonic
+        of HARMONIC_CANDIDATES
+    ) {
+        const candidateFrequency =
+            detectedFrequency /
+            harmonic;
+
+
+        if (
+            candidateFrequency <
+                MIN_PLAUSIBLE_FUNDAMENTAL_HZ ||
+            candidateFrequency >
+                MAX_PLAUSIBLE_FUNDAMENTAL_HZ
+        ) {
+            continue;
+        }
+
+
+        const candidateDeviation =
+            Math.abs(
+                rawCentsDeviation(
+                    candidateFrequency,
+                    targetFrequency
+                )
+            );
+
+
+        /*
+         * Only use harmonic correction if
+         * the corrected pitch is genuinely
+         * close to the expected target.
+         */
+        if (
+            candidateDeviation <=
+                MAX_HARMONIC_CORRECTION_CENTS &&
+            candidateDeviation <
+                bestDeviation
+        ) {
+            bestFrequency =
+                candidateFrequency;
+
+            bestDeviation =
+                candidateDeviation;
+        }
+    }
+
+
+    return bestFrequency;
+}
+
+
+export function calculateCentsDeviation(
+    detectedFrequency,
+    targetFrequency
+) {
+    const normalizedFrequency =
+        normalizeDetectedFrequencyToTarget(
+            detectedFrequency,
+            targetFrequency
+        );
+
+
+    if (
+        normalizedFrequency ===
+        null
+    ) {
+        return null;
+    }
+
+
+    return rawCentsDeviation(
+        normalizedFrequency,
+        targetFrequency
     );
 }
 
-/**
- * Converts pitch deviation into 0-100 points.
- *
- * 0-15 cents  -> 100 points
- * 15-50 cents -> linear decrease
- * >= 50 cents -> 0 points
- *
- * Gaussian weighting is intentionally NOT applied here.
- * Gaussian weighting is used for the position of the frame
- * inside the duration of the target note.
- */
-export function calculateFrameScore(centsDeviation) {
+
+export function calculateFrameScore(
+    centsDeviation
+) {
     if (
         centsDeviation === null ||
         centsDeviation === undefined ||
-        !Number.isFinite(centsDeviation)
+        !Number.isFinite(
+            centsDeviation
+        )
     ) {
         return 0;
     }
 
-    const absoluteDeviation = Math.abs(centsDeviation);
 
-    if (absoluteDeviation <= PERFECT_CENTS) {
+    const absoluteDeviation =
+        Math.abs(
+            centsDeviation
+        );
+
+
+    if (
+        absoluteDeviation <=
+        PERFECT_CENTS
+    ) {
         return 100;
     }
 
-    if (absoluteDeviation >= MAX_CENTS_ERROR) {
+
+    if (
+        absoluteDeviation >=
+        MAX_CENTS_ERROR
+    ) {
         return 0;
     }
 
-    const range = MAX_CENTS_ERROR - PERFECT_CENTS;
-    const distance = absoluteDeviation - PERFECT_CENTS;
 
-    return 100 * (1 - distance / range);
+    return (
+        100 *
+        (
+            1 -
+            (
+                absoluteDeviation -
+                PERFECT_CENTS
+            ) /
+            (
+                MAX_CENTS_ERROR -
+                PERFECT_CENTS
+            )
+        )
+    );
 }
 
-/**
- * Gaussian weight based on the frame position inside a note.
- *
- * The middle of the note receives weight 1.
- * Frames close to the beginning/end receive much lower weights.
- *
- * With sigmaRatio = 0.25:
- *
- * start       middle        end
- * ~0.135        1.0        ~0.135
- */
+
 export function calculateGaussianWeight(
     timeSeconds,
     startTimeSeconds,
     durationSeconds,
-    sigmaRatio = DEFAULT_SIGMA_RATIO
+    sigmaRatio =
+        DEFAULT_SIGMA_RATIO
 ) {
     if (
-        !Number.isFinite(timeSeconds) ||
-        !Number.isFinite(startTimeSeconds) ||
-        !Number.isFinite(durationSeconds) ||
+        !Number.isFinite(
+            timeSeconds
+        ) ||
+        !Number.isFinite(
+            startTimeSeconds
+        ) ||
+        !Number.isFinite(
+            durationSeconds
+        ) ||
         durationSeconds <= 0
     ) {
         return 0;
     }
 
+
     const endTimeSeconds =
-        startTimeSeconds + durationSeconds;
+        startTimeSeconds +
+        durationSeconds;
+
 
     if (
-        timeSeconds < startTimeSeconds ||
-        timeSeconds > endTimeSeconds
+        timeSeconds <
+            startTimeSeconds ||
+        timeSeconds >
+            endTimeSeconds
     ) {
         return 0;
     }
 
+
     const center =
-        startTimeSeconds + durationSeconds / 2;
+        startTimeSeconds +
+        durationSeconds / 2;
+
 
     const sigma =
-        durationSeconds * sigmaRatio;
+        durationSeconds *
+        sigmaRatio;
+
 
     if (sigma <= 0) {
         return 1;
     }
 
+
     const distance =
-        (timeSeconds - center) / sigma;
+        (
+            timeSeconds -
+            center
+        ) /
+        sigma;
+
 
     return Math.exp(
-        -0.5 * distance * distance
+        -0.5 *
+        distance *
+        distance
     );
 }
 
-/**
- * Returns the reference note active at a specific audio time.
- *
- * Rests are ignored.
- */
+
 export function findActiveTargetNote(
     targetNotes,
     timeSeconds
 ) {
     if (
-        !Array.isArray(targetNotes) ||
-        !Number.isFinite(timeSeconds)
+        !Array.isArray(
+            targetNotes
+        ) ||
+        !Number.isFinite(
+            timeSeconds
+        )
     ) {
         return null;
     }
 
+
     return (
-        targetNotes.find((note) => {
-            if (note?.type !== "note") {
-                return false;
+        targetNotes.find(
+            (note) => {
+                if (
+                    note?.type !==
+                    "note"
+                ) {
+                    return false;
+                }
+
+
+                const start =
+                    Number(
+                        note.start_time_seconds
+                    );
+
+                const duration =
+                    Number(
+                        note.duration_seconds
+                    );
+
+                const end =
+                    start +
+                    duration;
+
+
+                return (
+                    Number.isFinite(
+                        start
+                    ) &&
+                    Number.isFinite(
+                        duration
+                    ) &&
+                    duration > 0 &&
+                    timeSeconds >=
+                        start &&
+                    timeSeconds <
+                        end
+                );
             }
-
-            const start =
-                Number(note.start_time_seconds);
-
-            const duration =
-                Number(note.duration_seconds);
-
-            const end = start + duration;
-
-            return (
-                timeSeconds >= start &&
-                timeSeconds < end
-            );
-        }) ?? null
+        ) ?? null
     );
 }
 
-/**
- * Scores one target note using all microphone frames
- * captured during its duration.
- *
- * IMPORTANT:
- * Invalid / unclear frames remain part of the weighted average
- * and receive 0 points.
- *
- * This means silence or unreliable microphone detection
- * cannot accidentally result in a perfect score.
- */
+
 export function calculateNoteScore(
     targetNote,
     pitchFrames,
     options = {}
 ) {
     const {
-        minClarity = DEFAULT_MIN_CLARITY,
-        sigmaRatio = DEFAULT_SIGMA_RATIO
+        minClarity =
+            DEFAULT_MIN_CLARITY,
+
+        sigmaRatio =
+            DEFAULT_SIGMA_RATIO,
     } = options;
 
-    if (!targetNote || !Array.isArray(pitchFrames)) {
+
+    if (
+        !targetNote ||
+        !Array.isArray(
+            pitchFrames
+        )
+    ) {
         return {
             score: 0,
             averageDeviation: null,
             frameCount: 0,
-            validFrameCount: 0
+            validFrameCount: 0,
         };
     }
 
-    if (targetNote.type !== "note") {
+
+    if (
+        targetNote.type !==
+        "note"
+    ) {
         return {
             score: null,
             averageDeviation: null,
             frameCount: 0,
-            validFrameCount: 0
+            validFrameCount: 0,
         };
     }
 
+
     const startTime =
-        Number(targetNote.start_time_seconds);
+        Number(
+            targetNote.start_time_seconds
+        );
 
     const duration =
-        Number(targetNote.duration_seconds);
+        Number(
+            targetNote.duration_seconds
+        );
 
     const targetFrequency =
-        Number(targetNote.frequency_hz);
+        Number(
+            targetNote.frequency_hz
+        );
 
     const endTime =
-        startTime + duration;
+        startTime +
+        duration;
+
 
     if (
-        !Number.isFinite(startTime) ||
-        !Number.isFinite(duration) ||
+        !Number.isFinite(
+            startTime
+        ) ||
+        !Number.isFinite(
+            duration
+        ) ||
         duration <= 0 ||
-        !Number.isFinite(targetFrequency) ||
+        !Number.isFinite(
+            targetFrequency
+        ) ||
         targetFrequency <= 0
     ) {
         return {
             score: 0,
             averageDeviation: null,
             frameCount: 0,
-            validFrameCount: 0
+            validFrameCount: 0,
         };
     }
 
+
     const framesInsideNote =
-        pitchFrames.filter((frame) => {
-            const time =
-                Number(frame.time);
+        pitchFrames.filter(
+            (frame) => {
+                const time =
+                    Number(
+                        frame.time
+                    );
 
-            return (
-                Number.isFinite(time) &&
-                time >= startTime &&
-                time < endTime
-            );
-        });
 
-    if (framesInsideNote.length === 0) {
+                return (
+                    Number.isFinite(
+                        time
+                    ) &&
+                    time >=
+                        startTime &&
+                    time <
+                        endTime
+                );
+            }
+        );
+
+
+    if (
+        framesInsideNote.length ===
+        0
+    ) {
         return {
             score: 0,
             averageDeviation: null,
             frameCount: 0,
-            validFrameCount: 0
+            validFrameCount: 0,
         };
     }
+
 
     let weightedScoreSum = 0;
     let totalWeight = 0;
@@ -288,39 +505,63 @@ export function calculateNoteScore(
 
     let validFrameCount = 0;
 
-    for (const frame of framesInsideNote) {
+
+    for (
+        const frame
+        of framesInsideNote
+    ) {
         const weight =
             calculateGaussianWeight(
-                frame.time,
+                Number(
+                    frame.time
+                ),
                 startTime,
                 duration,
                 sigmaRatio
             );
 
+
         if (weight <= 0) {
             continue;
         }
 
-        totalWeight += weight;
+
+        /*
+         * Invalid frames remain in the denominator.
+         * Silence therefore still reduces the score.
+         */
+        totalWeight +=
+            weight;
+
 
         const frequency =
-            Number(frame.frequency);
+            Number(
+                frame.frequency
+            );
 
         const clarity =
-            Number(frame.clarity ?? 0);
+            Number(
+                frame.clarity ??
+                0
+            );
+
 
         const isValidPitch =
-            Number.isFinite(frequency) &&
+            Number.isFinite(
+                frequency
+            ) &&
             frequency > 0 &&
-            clarity >= minClarity;
+            clarity >=
+                minClarity;
+
 
         if (!isValidPitch) {
-            // Missing / unclear pitch = 0 frame score.
-            // Weight still remains in totalWeight.
             continue;
         }
 
+
         validFrameCount += 1;
+
 
         const centsDeviation =
             calculateCentsDeviation(
@@ -328,29 +569,43 @@ export function calculateNoteScore(
                 targetFrequency
             );
 
+
         const frameScore =
             calculateFrameScore(
                 centsDeviation
             );
 
+
         weightedScoreSum +=
-            frameScore * weight;
+            frameScore *
+            weight;
+
 
         if (
-            centsDeviation !== null &&
-            Number.isFinite(centsDeviation)
+            centsDeviation !==
+                null &&
+            Number.isFinite(
+                centsDeviation
+            )
         ) {
             weightedDeviationSum +=
-                Math.abs(centsDeviation) * weight;
+                Math.abs(
+                    centsDeviation
+                ) *
+                weight;
 
-            validDeviationWeight += weight;
+            validDeviationWeight +=
+                weight;
         }
     }
 
+
     const score =
         totalWeight > 0
-            ? weightedScoreSum / totalWeight
+            ? weightedScoreSum /
+              totalWeight
             : 0;
+
 
     const averageDeviation =
         validDeviationWeight > 0
@@ -358,98 +613,127 @@ export function calculateNoteScore(
               validDeviationWeight
             : null;
 
+
     return {
-        score: Number(score.toFixed(2)),
+        score:
+            Number(
+                score.toFixed(2)
+            ),
 
         averageDeviation:
-            averageDeviation === null
+            averageDeviation ===
+            null
                 ? null
                 : Number(
-                    averageDeviation.toFixed(2)
+                    averageDeviation.toFixed(
+                        2
+                    )
                 ),
 
         frameCount:
             framesInsideNote.length,
 
-        validFrameCount
+        validFrameCount,
     };
 }
 
-/**
- * Scores the complete exercise.
- *
- * Each musical note receives one note score.
- * Rests are ignored.
- *
- * Final exercise score is the average of note scores.
- */
+
 export function calculateExerciseScore(
     jsonData,
     pitchFrames,
     options = {}
 ) {
     const allEntries =
-        normalizeTargetNotes(jsonData);
+        normalizeTargetNotes(
+            jsonData
+        );
+
 
     const targetNotes =
         allEntries.filter(
             (entry) =>
-                entry?.type === "note" &&
+                entry?.type ===
+                    "note" &&
                 Number.isFinite(
-                    Number(entry.frequency_hz)
-                )
+                    Number(
+                        entry.frequency_hz
+                    )
+                ) &&
+                Number(
+                    entry.frequency_hz
+                ) >
+                    0
         );
 
-    if (targetNotes.length === 0) {
+
+    if (
+        targetNotes.length ===
+        0
+    ) {
         return {
             score: 0,
             averageDeviation: null,
             totalNotes: 0,
             notesWithDetectedPitch: 0,
-            noteScores: []
+            noteScores: [],
         };
     }
 
+
     const noteScores =
-        targetNotes.map((targetNote, noteIndex) => {
-            const result =
-                calculateNoteScore(
-                    targetNote,
-                    pitchFrames,
-                    options
-                );
+        targetNotes.map(
+            (
+                targetNote,
+                noteIndex
+            ) => {
+                const result =
+                    calculateNoteScore(
+                        targetNote,
+                        pitchFrames,
+                        options
+                    );
 
-            return {
-                noteIndex,
 
-                pitch:
-                    targetNote.pitch ?? null,
+                return {
+                    noteIndex,
 
-                targetFrequency:
-                    Number(
-                        targetNote.frequency_hz
-                    ),
+                    pitch:
+                        targetNote.pitch ??
+                        null,
 
-                startTime:
-                    Number(
-                        targetNote.start_time_seconds
-                    ),
+                    targetFrequency:
+                        Number(
+                            targetNote.frequency_hz
+                        ),
 
-                duration:
-                    Number(
-                        targetNote.duration_seconds
-                    ),
+                    startTime:
+                        Number(
+                            targetNote.start_time_seconds
+                        ),
 
-                ...result
-            };
-        });
+                    duration:
+                        Number(
+                            targetNote.duration_seconds
+                        ),
+
+                    ...result,
+                };
+            }
+        );
+
 
     const score =
         noteScores.reduce(
-            (sum, note) =>
-                sum + note.score,
+            (
+                sum,
+                note
+            ) =>
+                sum +
+                note.score,
             0
-        ) / noteScores.length;
+        ) /
+        noteScores.length;
+
 
     const deviations =
         noteScores
@@ -459,34 +743,51 @@ export function calculateExerciseScore(
             )
             .filter(
                 (value) =>
-                    value !== null &&
-                    Number.isFinite(value)
+                    value !==
+                        null &&
+                    Number.isFinite(
+                        value
+                    )
             );
+
 
     const averageDeviation =
         deviations.length > 0
             ? deviations.reduce(
-                (sum, value) =>
-                    sum + value,
+                (
+                    sum,
+                    value
+                ) =>
+                    sum +
+                    value,
                 0
-            ) / deviations.length
+            ) /
+              deviations.length
             : null;
+
 
     const notesWithDetectedPitch =
         noteScores.filter(
             (note) =>
-                note.validFrameCount > 0
+                note.validFrameCount >
+                0
         ).length;
+
 
     return {
         score:
-            Number(score.toFixed(2)),
+            Number(
+                score.toFixed(2)
+            ),
 
         averageDeviation:
-            averageDeviation === null
+            averageDeviation ===
+            null
                 ? null
                 : Number(
-                    averageDeviation.toFixed(2)
+                    averageDeviation.toFixed(
+                        2
+                    )
                 ),
 
         totalNotes:
@@ -494,6 +795,6 @@ export function calculateExerciseScore(
 
         notesWithDetectedPitch,
 
-        noteScores
+        noteScores,
     };
 }
