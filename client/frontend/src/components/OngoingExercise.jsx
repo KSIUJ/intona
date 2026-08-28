@@ -12,7 +12,7 @@ const ENDING_STATUS = {
     STOPPED: "Stopped",
     ENDED: "Ended",
 };
-
+const HIGHWAY_CARD_HEIGHT = 660;
 export default function OngoingExercise() {
     const queryClient = useQueryClient();
     const {id, exercise_slug} = useParams();
@@ -20,7 +20,6 @@ export default function OngoingExercise() {
     const location_data = useLocation();
     const {state} = location_data;
 
-    // Audio (fortepian) gra z piano_presigned_url - osobny link od pliku z nutami
     const audio = useAudio(state.piano_presigned_url);
 
     const {
@@ -308,32 +307,48 @@ export default function OngoingExercise() {
                     Sing along and keep your pitch as close to the target note as possible.
                 </p>
             </header>
-            <section style={{display: 'flex', flexDirection: 'row', height: '560px'}} className={"ongoing"}>
-                <section className="app-card ongoing" style={{padding: "24px", marginBottom: "24px"}} >
-                    <div style={{display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "24px"}}>
-                        <button type="button" className="btn btn-primary" onClick={() => audio.Toggle.current()}>
-                            {audio.isPlaying ? "Pause" : "Start"}
-                        </button>
+<section
+    style={{
+        display: 'flex',
+        flexDirection: 'row',
+        gap: '20px',
+        height: `${HIGHWAY_CARD_HEIGHT}px`,
+        width: '90vw',
+        maxWidth: '90vw',
+        marginLeft: 'calc(50% - 45vw)',
+        marginRight: 'calc(50% - 45vw)',
+        marginBottom: '24px',
+    }}
+    className={"ongoing"}
+>
+  <section
+        className="app-card ongoing"
+        style={{padding: "24px", flex: 1, minWidth: 0, height: "100%", boxSizing: "border-box"}}
+    >
+        <div style={{display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "24px"}}>
+            <button type="button" className="btn btn-primary" onClick={() => audio.Toggle.current()}>
+                {audio.isPlaying ? "Pause" : "Start"}
+            </button>
+            <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() =>
+                    handleEndOfExercise(
+                        state.log_id,
+                        state.exercise_access_token,
+                        audio.time,
+                        ENDING_STATUS.STOPPED
+                    )
+                }
+            >
+                Stop exercise
+            </button>
+        </div>
 
-                        <button
-                            type="button"
-                            className="btn btn-secondary"
-                            onClick={() =>
-                                handleEndOfExercise(
-                                    state.log_id,
-                                    state.exercise_access_token,
-                                    audio.time,
-                                    ENDING_STATUS.STOPPED
-                                )
-                            }
-                        >
-                            Stop exercise
-                        </button>
-                    </div>
+        <NoteHighway musicXmlUrl={state.source_presigned_url} audioRef={audio.audioRef}/>
+    </section>
 
-                    <NoteHighway musicXmlUrl={state.source_presigned_url} audioRef={audio.audioRef}/>
-
-                    <div style={{marginTop: "20px"}}>
+                    {/* <div style={{marginTop: "20px"}}>
                         <p>
                             Microphone: <strong>{isListening ? "active" : "inactive"}</strong>
                         </p>
@@ -356,10 +371,11 @@ export default function OngoingExercise() {
                         <p>
                             Clarity: <strong>{clarity.toFixed(2)}</strong>
                         </p>
-                    </div>
-                </section>
-                <CentDeviationMeter cents={cents} isListening={isListening}/>
-            </section>
+                    </div> */}
+                
+        
+        <CentDeviationMeter cents={cents} isListening={isListening}/>
+</section>
             <section className="app-card ongoing" style={{padding: "24px"}}>
                 <h2>Live results</h2>
 
