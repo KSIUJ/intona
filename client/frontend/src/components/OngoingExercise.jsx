@@ -351,10 +351,11 @@ export default function OngoingExercise() {
                     liveResult.score;
 
                 const liveDeviation =
-                    clampDeviationForBackend(
-                        liveResult.averageDeviation ??
-                            0
-                    );
+                    Number.isFinite(
+                        liveResult.averageDeviation
+                    )
+                        ? liveResult.averageDeviation
+                        : 0;
 
 
                 liveScoreRef.current =
@@ -471,7 +472,9 @@ export default function OngoingExercise() {
                                     score,
 
                                 average_deviation:
-                                    deviation,
+                                    clampDeviationForBackend(
+                                        deviation
+                                    ),
 
                                 exercise_end_status:
                                     exerciseEndStatus,
@@ -517,7 +520,7 @@ export default function OngoingExercise() {
                         variables.exerciseEndStatus
                     ),
 
-            onSuccess(data) {
+            onSuccess(data, variables) {
                 localStorage.removeItem(
                     "exercise_access_token"
                 );
@@ -541,7 +544,7 @@ export default function OngoingExercise() {
                                 data.time_in_tune,
 
                             average_deviation:
-                                data.average_deviation,
+                                variables.averageDeviation,
 
                             exercise_duration:
                                 data.exercise_duration,
@@ -710,10 +713,11 @@ export default function OngoingExercise() {
                 finalResult.score;
 
             const finalDeviation =
-                clampDeviationForBackend(
-                    finalResult.averageDeviation ??
-                        0
-                );
+                Number.isFinite(
+                    finalResult.averageDeviation
+                )
+                    ? finalResult.averageDeviation
+                    : 0;
 
 
             liveScoreRef.current =
