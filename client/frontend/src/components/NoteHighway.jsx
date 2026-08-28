@@ -15,7 +15,20 @@ const COLOR_GRID_LABEL = "rgba(24, 23, 26, 0.45)";
 const HIGHWAY_HEIGHT = 520;
 const NOTE_HEIGHT = 40;
 const MIN_NOTE_WIDTH = 60;
-const MIN_CLARITY_FOR_COLOR = 0.9;
+
+function stripOctave(noteName) {
+    if (!noteName) return null;
+    return noteName.replace(/-?\d+$/, "");
+}
+
+const RECENT_WINDOW_MS = 900;
+const COLOR_HOLD_MS = 110;
+
+const IN_TUNE_CENTS = 40;
+const SLIGHT_OFF_CENTS = 60;
+
+// DEMO BOOST: Wystarczy, że 15% Twojego śpiewu w oknie czasowym to dobra nuta, żeby kolor załapał
+const MIN_MATCH_RATIO = 0.15;
 
 const NATURAL_NOTE_NAMES = { 0: "C", 2: "D", 4: "E", 5: "F", 7: "G", 9: "A", 11: "B" };
 
@@ -28,42 +41,32 @@ function halfToneToNoteName(halfTone) {
     return naturalName ? `${naturalName}${octave}` : null;
 }
 
-function halfToneToFrequency(halfTone) {
-    return 440 * Math.pow(2, (halfTone - 57) / 12);
+const CHROMATIC_NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+function halfToneToFullNoteName(halfTone) {
+    const rounded = Math.round(halfTone);
+    const midi = rounded + 12;
+    const chromaIndex = ((midi % 12) + 12) % 12;
+    const octave = Math.floor(midi / 12) - 1;
+    return `${CHROMATIC_NOTE_NAMES[chromaIndex]}${octave}`;
 }
 
-function pickNoteColor(isActive, liveFrequency, liveClarity, targetFrequency) {
-    if (!isActive) return COLOR_DEFAULT;
+function pickNoteColor(isActive, colorInputs, targetNoteName) {
+    if (!isActive || !targetNoteName) return COLOR_DEFAULT;
+    if (!colorInputs.hasSignal) return COLOR_DEFAULT;
 
-    const hasValidSignal =
-        Number.isFinite(liveFrequency) &&
-        liveFrequency > 0 &&
-        Number.isFinite(liveClarity) &&
-        liveClarity >= MIN_CLARITY_FOR_COLOR;
-
-    if (!hasValidSignal || !Number.isFinite(targetFrequency) || targetFrequency <= 0) {
-        return COLOR_DEFAULT;
+    if (colorInputs.matchRatio < MIN_MATCH_RATIO || colorInputs.averagedCents === null) {
+        return COLOR_OFF;
     }
 
-    const centsDeviation = Math.abs(1200 * Math.log2(liveFrequency / targetFrequency));
+    const centsDeviation = Math.abs(colorInputs.averagedCents);
 
-    if (centsDeviation <= 30) return COLOR_IN_TUNE;
-    if (centsDeviation <= 45) return COLOR_SLIGHT_OFF;
+    if (centsDeviation <= IN_TUNE_CENTS) return COLOR_IN_TUNE;
+    if (centsDeviation <= SLIGHT_OFF_CENTS) return COLOR_SLIGHT_OFF;
     return COLOR_OFF;
 }
 
-/**
- * NoteHighway
- *
- * Dwa sposoby zasilenia nutami:
- * 1) `notes` (preferowane) — gotowa tablica obiektów
- *    { startTimeSeconds, durationSeconds, halfTone, targetFrequencyHz?, lyricText? }
- *    np. znormalizowana z `state.processed_data` z serwera.
- * 2) `musicXmlUrl` (fallback / stary sposób) — komponent sam parsuje MusicXML przez OSMD.
- *
- * Jeśli `notes` jest podane, `musicXmlUrl` jest ignorowany.
- */
-export default function NoteHighway({ musicXmlUrl, audioRef, liveFrequency, liveClarity, notes: notesProp }) {
+export default function NoteHighway({ musicXmlUrl, audioRef, liveNote, liveCents, liveClarity, notes: notesProp }) {
     const canvasRef = useRef(null);
     const wrapperRef = useRef(null);
     const hiddenOsmdContainerRef = useRef(null);
@@ -72,12 +75,15 @@ export default function NoteHighway({ musicXmlUrl, audioRef, liveFrequency, live
 
     const notes = notesProp ?? parsedNotes;
 
-    const liveFrequencyRef = useRef(liveFrequency);
+    const liveNoteRef = useRef(liveNote);
+    const liveCentsRef = useRef(liveCents);
     const liveClarityRef = useRef(liveClarity);
+
     useEffect(() => {
-        liveFrequencyRef.current = liveFrequency;
+        liveNoteRef.current = liveNote;
+        liveCentsRef.current = liveCents;
         liveClarityRef.current = liveClarity;
-    }, [liveFrequency, liveClarity]);
+    }, [liveNote, liveCents, liveClarity]);
 
     useEffect(() => {
         if (notesProp) return;
@@ -152,6 +158,9 @@ export default function NoteHighway({ musicXmlUrl, audioRef, liveFrequency, live
         const minHalfTone = (halfTones.length ? Math.min(...halfTones) : 48) - 2;
         const maxHalfTone = (halfTones.length ? Math.max(...halfTones) : 72) + 2;
 
+        const recentReadingsRef = [];
+        const noteColorHoldRef = new Map();
+
         function getCssSize() {
             const dpr = window.devicePixelRatio || 1;
             return { width: canvas.width / dpr, height: canvas.height / dpr };
@@ -188,12 +197,83 @@ export default function NoteHighway({ musicXmlUrl, audioRef, liveFrequency, live
             context.restore();
         }
 
+        function pushRecentReading(noteName, cents) {
+            const now = performance.now();
+            recentReadingsRef.push({ note: noteName, cents, time: now });
+
+            while (recentReadingsRef.length && now - recentReadingsRef[0].time > RECENT_WINDOW_MS) {
+                recentReadingsRef.shift();
+            }
+        }
+
+        function getColorInputsForNote(targetNoteName) {
+            // KLUCZOWA ZMIANA 1: Filtrujemy null'e (ciszę z mikrofonu)
+            const validReadings = recentReadingsRef.filter(
+                (reading) => reading.note !== null && Number.isFinite(reading.cents)
+            );
+
+            if (validReadings.length === 0) {
+                return { hasSignal: false, totalCount: 0, matchedCount: 0, matchRatio: 0, averagedCents: null };
+            }
+
+            const totalCount = validReadings.length;
+            const targetChroma = stripOctave(targetNoteName);
+
+            const matching = validReadings.filter(
+                (reading) => stripOctave(reading.note) === targetChroma
+            );
+
+            const matchedCount = matching.length;
+            const matchRatio = matchedCount / totalCount;
+
+            const averagedCents =
+                matchedCount > 0
+                    ? matching.reduce((acc, reading) => acc + reading.cents, 0) / matchedCount
+                    : null;
+
+            return { hasSignal: true, totalCount, matchedCount, matchRatio, averagedCents };
+        }
+
+        function getStableColor(noteIndex, isActive, candidateColor) {
+            if (!isActive) {
+                noteColorHoldRef.delete(noteIndex);
+                return COLOR_DEFAULT;
+            }
+
+            const now = performance.now();
+            const entry = noteColorHoldRef.get(noteIndex);
+
+            if (!entry) {
+                noteColorHoldRef.set(noteIndex, { displayed: candidateColor, candidate: candidateColor, since: now });
+                return candidateColor;
+            }
+
+            if (candidateColor === entry.displayed) {
+                entry.candidate = candidateColor;
+                return entry.displayed;
+            }
+
+            if (entry.candidate !== candidateColor) {
+                entry.candidate = candidateColor;
+                entry.since = now;
+                return entry.displayed;
+            }
+
+            if (now - entry.since >= COLOR_HOLD_MS) {
+                entry.displayed = candidateColor;
+            }
+
+            return entry.displayed;
+        }
+
         function draw() {
             const { width: cssWidth, height: cssHeight } = getCssSize();
-            const playheadX = cssWidth * 0.1; 
+            const playheadX = cssWidth * 0.1;
             const topY = verticalMargin;
             const bottomY = cssHeight - verticalMargin;
             const elapsedSeconds = audioRef?.current?.currentTime ?? 0;
+
+            pushRecentReading(liveNoteRef.current, liveCentsRef.current);
 
             context.clearRect(0, 0, cssWidth, cssHeight);
             drawPitchGrid(cssWidth, cssHeight, topY, bottomY);
@@ -214,18 +294,11 @@ export default function NoteHighway({ musicXmlUrl, audioRef, liveFrequency, live
 
                 const isActive = elapsedSeconds >= note.startTimeSeconds && elapsedSeconds <= noteEnd;
 
-                // Jeśli mamy realną częstotliwość docelową z serwera (targetFrequencyHz),
-                // użyj jej — jest dokładniejsza niż odtworzona z halfTone.
-                const targetFrequency = Number.isFinite(note.targetFrequencyHz)
-                    ? note.targetFrequencyHz
-                    : halfToneToFrequency(note.halfTone);
+                const targetNoteName = halfToneToFullNoteName(note.halfTone);
+                const colorInputs = getColorInputsForNote(targetNoteName);
 
-                const fillColor = pickNoteColor(
-                    isActive,
-                    liveFrequencyRef.current,
-                    liveClarityRef.current,
-                    targetFrequency
-                );
+                const candidateColor = pickNoteColor(isActive, colorInputs, targetNoteName);
+                const fillColor = getStableColor(i, isActive, candidateColor);
 
                 context.save();
                 if (isActive) {
