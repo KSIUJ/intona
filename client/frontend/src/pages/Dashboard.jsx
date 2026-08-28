@@ -3,11 +3,8 @@ import {Link} from "react-router-dom";
 import {useQuery} from "@tanstack/react-query";
 
 
-
-
 function HomeIcon() {
-    return (
-        <svg
+    return (<svg
             viewBox="0 0 24 24"
             width="20"
             height="20"
@@ -21,13 +18,11 @@ function HomeIcon() {
             <path d="M3 11.5 12 4l9 7.5"/>
             <path d="M5 10.5V20h14v-9.5"/>
             <path d="M9 20v-6h6v6"/>
-        </svg>
-    );
+        </svg>);
 }
 
 function SingIcon() {
-    return (
-        <svg
+    return (<svg
             viewBox="0 0 24 24"
             width="20"
             height="20"
@@ -41,13 +36,11 @@ function SingIcon() {
             <path d="M9 18V5l10-2v13"/>
             <circle cx="6" cy="18" r="3"/>
             <circle cx="16" cy="16" r="3"/>
-        </svg>
-    );
+        </svg>);
 }
 
 function DashboardIcon() {
-    return (
-        <svg
+    return (<svg
             viewBox="0 0 24 24"
             width="20"
             height="20"
@@ -62,13 +55,11 @@ function DashboardIcon() {
             <rect x="14" y="3" width="7" height="7" rx="1"/>
             <rect x="3" y="14" width="7" height="7" rx="1"/>
             <rect x="14" y="14" width="7" height="7" rx="1"/>
-        </svg>
-    );
+        </svg>);
 }
 
 function CalendarIcon() {
-    return (
-        <svg
+    return (<svg
             viewBox="0 0 24 24"
             width="26"
             height="26"
@@ -82,13 +73,11 @@ function CalendarIcon() {
             <rect x="3" y="5" width="18" height="16" rx="2"/>
             <path d="M8 3v4M16 3v4M3 10h18"/>
             <path d="M8 14h2M14 14h2M8 17h2M14 17h2"/>
-        </svg>
-    );
+        </svg>);
 }
 
 function MusicIcon() {
-    return (
-        <svg
+    return (<svg
             viewBox="0 0 24 24"
             width="21"
             height="21"
@@ -102,13 +91,11 @@ function MusicIcon() {
             <path d="M9 18V5l10-2v13"/>
             <circle cx="6" cy="18" r="3"/>
             <circle cx="16" cy="16" r="3"/>
-        </svg>
-    );
+        </svg>);
 }
 
 function ClockIcon() {
-    return (
-        <svg
+    return (<svg
             viewBox="0 0 24 24"
             width="21"
             height="21"
@@ -121,13 +108,11 @@ function ClockIcon() {
         >
             <circle cx="12" cy="12" r="9"/>
             <path d="M12 7v5l3 2"/>
-        </svg>
-    );
+        </svg>);
 }
 
 function AchievementIcon() {
-    return (
-        <svg
+    return (<svg
             viewBox="0 0 24 24"
             width="21"
             height="21"
@@ -140,8 +125,7 @@ function AchievementIcon() {
         >
             <circle cx="12" cy="8" r="5"/>
             <path d="m8.5 12-1 9 4.5-3 4.5 3-1-9"/>
-        </svg>
-    );
+        </svg>);
 }
 
 function Dashboard() {
@@ -214,16 +198,9 @@ function Dashboard() {
         return <></>
     }
 
-    return (
-        <div className="dashboard">
+    return (<div className="dashboard">
             <aside className="dashboard-sidebar">
-                <button
-                    className="sidebar-menu-button"
-                    type="button"
-                    aria-label="Open menu"
-                >
-                    ☰
-                </button>
+
 
                 <nav className="sidebar-navigation">
                     <Link className="sidebar-link" to="/">
@@ -232,14 +209,6 @@ function Dashboard() {
             </span>
                         <span>Home</span>
                     </Link>
-
-                    <Link className="sidebar-link" to="/just-sing">
-            <span className="sidebar-icon">
-              <SingIcon/>
-            </span>
-                        <span>Just sing</span>
-                    </Link>
-
                     <Link className="sidebar-link active" to="/dashboard">
             <span className="sidebar-icon">
               <DashboardIcon/>
@@ -266,13 +235,7 @@ function Dashboard() {
                         <h1>Dashboard</h1>
                     </div>
 
-                    <button
-                        className="more-button"
-                        type="button"
-                        aria-label="More options"
-                    >
-                        ⋮
-                    </button>
+
                 </header>
 
                 <section className="profile-section">
@@ -304,7 +267,8 @@ function Dashboard() {
 
                 <section className="progress-section">
                     <article className="progress-item">
-                        <div className="progress-circle progress" style={{ "--progress": `${stats.mastered_percentage * 3.6}deg` }}>
+                        <div className="progress-circle progress"
+                             style={{"--progress": `${stats.mastered_percentage * 3.6}deg`}}>
                             <div className="progress-circle-inner">
                                 <strong>{stats.mastered_percentage.toFixed(2)}%</strong>
                             </div>
@@ -314,7 +278,8 @@ function Dashboard() {
                     </article>
 
                     <article className="progress-item">
-                        <div className="progress-circle progress" style={{ "--progress": `${stats.average_score * 3.6}deg` }}>
+                        <div className="progress-circle progress"
+                             style={{"--progress": `${stats.average_score * 3.6}deg`}}>
                             <div className="progress-circle-inner">
                                 <strong>{stats.average_score.toFixed(2)}%</strong>
                             </div>
@@ -324,7 +289,8 @@ function Dashboard() {
                     </article>
 
                     <article className="progress-item">
-                        <div className="progress-circle progress" style={{ "--progress": `${stats.active_days_percentage * 3.6}deg` }}>
+                        <div className="progress-circle progress"
+                             style={{"--progress": `${stats.active_days_percentage * 3.6}deg`}}>
                             <div className="progress-circle-inner">
                                 <strong>{stats.active_days_percentage}%</strong>
                             </div>
@@ -335,16 +301,14 @@ function Dashboard() {
                 </section>
 
                 <section className="summary-section">
-                    {stats.exercise &&
-                        <article className="summary-card">
-                            <div className="summary-icon">
-                                <MusicIcon/>
-                            </div>
+                    {stats.exercise && <article className="summary-card">
+                        <div className="summary-icon">
+                            <MusicIcon/>
+                        </div>
 
-                            <strong>{stats.exercise?.exercise_name}</strong>
-                            <span>Favourite exercise</span>
-                        </article>
-                    }
+                        <strong>{stats.exercise?.exercise_name}</strong>
+                        <span>Favourite exercise</span>
+                    </article>}
                     <article className="summary-card">
                         <div className="summary-icon">
                             <ClockIcon/>
@@ -364,8 +328,7 @@ function Dashboard() {
                     </article>
                 </section>
             </main>
-        </div>
-    );
+        </div>);
 }
 
 export default Dashboard;

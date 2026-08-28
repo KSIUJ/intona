@@ -15,7 +15,7 @@ export default function FormDialog({postCarouselSettingsMutate, typesAvailable, 
     const handleSubmit = (e) => {
         e.preventDefault();
         const settingsObject = Object.fromEntries(new FormData(e.target).entries())
-        // mam type i exercise_name, teraz jeszcze filter
+        // have type and exercise_name, still need filter
         settingsObject.filter = {
             name: "",
             difficulties: {"Easy": true, "Medium": true, "Hard": true},
@@ -40,7 +40,7 @@ export default function FormDialog({postCarouselSettingsMutate, typesAvailable, 
         <DialogContent sx={{padding: '24px 24px 16px 24px'}}>
             <form onSubmit={handleSubmit} id="subscription-form">
 
-                {/* Etykieta zamiast domyślnego InputLabel, żeby mieć pełną kontrolę nad stylem */}
+                {/* Custom label instead of the default InputLabel, for full control over styling */}
                 <Typography sx={{
                     fontSize: '11px',
                     fontWeight: 700,
@@ -135,7 +135,7 @@ export default function FormDialog({postCarouselSettingsMutate, typesAvailable, 
                 disableElevation
                 sx={{
                     flex: 1,
-                    backgroundColor: '#4f46e5', // Mocny niebieski/fiolet ze screena
+                    backgroundColor: '#4f46e5', // Strong blue/purple from the screenshot
                     color: '#ffffff',
                     textTransform: 'none',
                     fontWeight: 700,

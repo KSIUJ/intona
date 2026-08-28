@@ -95,4 +95,3 @@ async def actualize_user_preferred_settings(db: SessionDep, user: CurrentUser, s
     await db.refresh(user_settings)
 
     return user_settings.settings
-

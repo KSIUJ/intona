@@ -1,170 +1,94 @@
-import {useRef, useState} from "react";
-import ScoreViewer from "../components/ScoreViewer";
-import NoteHighway from "../components/NoteHighway";
-import LyricsTeleprompter from "../components/LyricsTeleprompter";
-import {useParams} from "react-router-dom";
-import PlaceholderBox from "../components/PlaceholderBox";
-import {useQuery} from "@tanstack/react-query";
-
+import {useNavigate, useParams} from "react-router-dom";
+import {useMutation, useQuery} from "@tanstack/react-query";
 
 export default function ExercisePage() {
-    const {exercise_slug, id} = useParams();
+    const {exercise_name, id} = useParams();
+    const navigate = useNavigate();
 
     const getData = async (id) => {
         const api_response = await fetch(`/api/exercises/${id}/start`, {
             method: "POST",
-            credentials: 'include'
-        })
+            credentials: "include",
+        });
 
         if (!api_response.ok) {
-            const api_text = await api_response.text()
-            throw new Error(`Error loading exercise ${api_text}`)
+            const api_text = await api_response.text();
+            throw new Error(`Error loading exercise ${api_text}`);
         }
 
         const api_response_json = await api_response.json()
         return api_response_json
-    }
+    };
 
-    const {data: item, isLoading, isError} = useQuery({
-        queryKey: ["exercise", id],
-        queryFn: () => getData(id),
-        staleTime: Infinity,
-        refetchOnWindowFocus: false
-    });
+    const {mutate} = useMutation({
+        mutationFn: () => getData(id),
+        onSuccess(data) {
+            console.log("successfully started exercise")
+            localStorage.removeItem('exercise_access_token')
+            navigate(`/exercises/${id}/${exercise_name}/start`, {
+                state: {
+                    piano_presigned_url: data.piano_presigned_url,
+                    source_presigned_url: data.source_presigned_url,
+                    processed_data: data.processed_data,
+                    log_id: data.log_id,
+                    exercise_access_token: data.exercise_access_token,
+                },
+            });
+            console.log("successfully started exercise2")
 
-
-    const [notes, setNotes] = useState([]);
-
-    const [showNotes, setShowNotes] = useState(false);
-
-    const audioRef = useRef(null);
-
-    const MUSICXML_URL = item?.source_presigned_url;
-    const AUDIO_URL = item?.piano_presigned_url;
-
-    if (isLoading) return <p>Ładowanie nut...</p>;
-    if (isError) return <p>Wystąpił błąd!</p>;
-
-
-    function handleStart() {
-        audioRef.current?.play();
-    }
-
-    function handleStop() {
-        if (audioRef.current) {
-            audioRef.current.pause();
+        },
+        onError(error) {
+            console.log("ERRRRRRRRRRRRRRRRRRRRRor")
+            console.log(JSON.stringify(error))
+            navigate("/")
         }
-    }
-
+    })
 
     return (
-        <div style={{
-            width: "100%",
-            maxWidth: "800px",
-            margin: "0 auto",
-            padding: "40px 16px 0",
-            boxSizing: "border-box"
-        }}>
+        <div className="page-container">
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: "20px",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                }}
+            >
+                <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)}>
+                    ← Back
+                </button>
 
-            {/* Nagłówek: tytuł jest prawdziwy, reszta to miejsce na później */}
-            <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: "20px",
-                flexWrap: "wrap",
-                gap: "12px"
-            }}>
-                <div style={{display: "flex", alignItems: "center", gap: "44px", flexWrap: "wrap"}}>
-                    <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        fontWeight: 800,
-                        fontSize: "24px",
-                        color: "#0d9488",
-                        letterSpacing: "0.5px"
-                    }}>
-                        <span role="img" aria-label="logo">🎤</span>
+                <div style={{display: "flex", alignItems: "center", gap: "12px"}}>
+                    <div
+                        style={{
+                            color: "var(--color-primary)",
+                            fontWeight: 800,
+                            fontSize: "15px",
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                        }}
+                    >
                         INTONA
                     </div>
-                    <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        fontSize: "24px",
-                        fontWeight: 600,
-                        color: "#1a1c1f"
-                    }}>
-                        <span role="img" aria-label="song">🎵</span>
-                        {item?.title ?? "Ćwiczenie"}
-                    </div>
+                    <h1 style={{margin: 0}}>{exercise_name ?? "Exercise"}</h1>
                 </div>
             </div>
 
-            <div style={{
-                background: "white",
-                borderRadius: "16px",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-                padding: "16px"
-            }}>
-                <NoteHighway notes={notes} audioRef={audioRef}/>
-                <LyricsTeleprompter notes={notes} audioRef={audioRef}/>
-            </div>
+            <div className="app-card" style={{padding: "22px"}}>
+                <h3>Ready to start?</h3>
 
-            <div style={{display: "flex", gap: "16px", marginTop: "16px"}}>
-                <div style={{flex: 2}}>
-                    <PlaceholderBox label="Pitch curve" height="140px"/>
-                </div>
-                <div style={{flex: 1}}>
-                    <PlaceholderBox label="Deviation in cents" height="140px"/>
+                <p className="page-subtitle" style={{marginBottom: "20px"}}>
+                    Once you click Start, your microphone and the track will begin — sing along with the notes shown.
+                </p>
+
+                <div style={{display: "flex", justifyContent: "center"}}>
+                    <button type="button" className="btn btn-primary" onClick={() => mutate(id)}>
+                        Start
+                    </button>
                 </div>
             </div>
-
-            <div style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: "16px",
-                marginTop: "20px",
-                flexWrap: "wrap"
-            }}>
-                <button onClick={handleStop} style={{
-                    padding: "14px 28px",
-                    borderRadius: "999px",
-                    border: "1px solid #d0d3d9",
-                    background: "white",
-                    fontWeight: 600,
-                    cursor: "pointer"
-                }}>
-                    Pauza
-                </button>
-                <button onClick={handleStart} style={{
-                    padding: "14px 40px",
-                    borderRadius: "999px",
-                    border: "none",
-                    background: "#0d9488",
-                    color: "white",
-                    fontWeight: 700,
-                    fontSize: "16px",
-                    cursor: "pointer"
-                }}>
-                    Start
-                </button>
-
-            </div>
-
-            {/* Wczytuje nuty z pliku — ukryty wizualnie, ale musi być zamontowany,
-        żeby onNotesLoaded w ogóle się wykonało */}
-            {/*ale co z tym*/}
-            <div style={{visibility: showNotes ? "visible" : "hidden"}}>
-                <ScoreViewer musicXmlUrl={MUSICXML_URL} onNotesLoaded={setNotes}/>
-            </div>
-
-            {/* Element audio — niewidoczny, sterowany programowo przez audioRef */}
-            {/*to tutaj normalnie damy url z serwera*/}
-            <audio ref={audioRef} src={AUDIO_URL}/>
-
         </div>
     );
 }

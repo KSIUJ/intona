@@ -84,7 +84,7 @@ const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type, clic
         <Card className="carousel-card">
             <CardActionArea
                 component={clickable ? Link : 'div'}
-                to={clickable ? `${linkBase}/${id}/${slug}?type=${type}` : ''}
+                to={clickable ? `${linkBase}/${id}/${title}?type=${type}` : ''}
                 sx={{height: '100%'}}
             >
                 <CardContent
@@ -259,7 +259,8 @@ const Carousel = ({info, setCarouselUpdating, setCarouselDelete}) => {
                     <div className="filter-menu" style={{
                         position: 'absolute',
                         right: 0,
-                        zIndex: 10
+                        zIndex: 10,
+                        top: '48px'
                     }}>
 
                         <div className="search-wrapper">
