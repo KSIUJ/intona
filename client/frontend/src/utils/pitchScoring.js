@@ -3,25 +3,10 @@ const PERFECT_CENTS = 15;
 const MAX_CENTS_ERROR = 50;
 const DEFAULT_SIGMA_RATIO = 0.25;
 
-/*
- * Pitch detectors can sometimes lock onto a strong vocal harmonic
- * instead of the fundamental frequency.
- *
- * The third and fifth harmonics are particularly common in voice.
- * We only correct them when the corrected frequency is close enough
- * to the expected target note.
- *
- * We intentionally do NOT correct the second harmonic, because that
- * would incorrectly accept singing one octave above the target.
- */
-const HARMONIC_CANDIDATES = [3, 5];
-
-const MAX_HARMONIC_CORRECTION_CENTS = 120;
-
-const MIN_PLAUSIBLE_FUNDAMENTAL_HZ = 70;
-const MAX_PLAUSIBLE_FUNDAMENTAL_HZ = 1200;
-
-const MIN_FREQUENCY_FOR_HARMONIC_CHECK_HZ = 900;
+const MAX_CORRECTION_DISTANCE_CENTS = 120;
+const MIN_HARMONIC_CHECK_HZ = 900;
+const HARMONIC_DIVISORS = [3, 5];
+const OCTAVE_SHIFTS = [-4, -3, -2, -1, 0, 1, 2, 3, 4];
 
 
 export function normalizeTargetNotes(data) {
@@ -59,44 +44,45 @@ function rawCentsDeviation(
 }
 
 
+function getOctaveCandidates(
+    frequency
+) {
+    return OCTAVE_SHIFTS.map(
+        (shift) =>
+            frequency *
+            Math.pow(2, shift)
+    );
+}
+
+
 /*
- * Correct a likely strong vocal harmonic.
+ * Pitchy may detect:
  *
- * Example:
+ * - the correct fundamental,
+ * - the same pitch in another octave,
+ * - a strong 3rd / 5th harmonic.
  *
- * target:   440 Hz
- * detected: 1320 Hz
+ * For scoring we select the plausible candidate
+ * closest to the expected target frequency.
  *
- * 1320 / 440 = 3
- *
- * Pitchy probably detected the third harmonic.
- * We convert it back to 440 Hz before scoring.
- *
- * Important:
- * we do not automatically fold octaves.
- * 880 Hz for a 440 Hz target must remain wrong.
+ * A completely unrelated frequency is NOT forced
+ * onto the target note. Correction is used only
+ * if a candidate is within 120 cents.
  */
 export function normalizeDetectedFrequencyToTarget(
     detectedFrequency,
     targetFrequency
 ) {
     if (
-        !Number.isFinite(
-            detectedFrequency
-        ) ||
-        !Number.isFinite(
-            targetFrequency
-        ) ||
+        !Number.isFinite(detectedFrequency) ||
+        !Number.isFinite(targetFrequency) ||
         detectedFrequency <= 0 ||
         targetFrequency <= 0
     ) {
         return null;
     }
 
-    let bestFrequency =
-        detectedFrequency;
-
-    let bestDeviation =
+    const originalDeviation =
         Math.abs(
             rawCentsDeviation(
                 detectedFrequency,
@@ -104,66 +90,125 @@ export function normalizeDetectedFrequencyToTarget(
             )
         );
 
+    let bestFrequency =
+        detectedFrequency;
+
+    let bestDeviation =
+        originalDeviation;
+
 
     /*
-     * Low frequencies are much more likely
-     * to already be the actual fundamental.
+     * Always allow octave normalization.
+     *
+     * This makes the exercise usable by people
+     * with different vocal ranges while still
+     * requiring the same musical pitch class.
      */
-    if (
-        detectedFrequency <
-        MIN_FREQUENCY_FOR_HARMONIC_CHECK_HZ
-    ) {
-        return bestFrequency;
-    }
-
+    const octaveCandidates =
+        getOctaveCandidates(
+            detectedFrequency
+        );
 
     for (
-        const harmonic
-        of HARMONIC_CANDIDATES
+        const candidate
+        of octaveCandidates
     ) {
-        const candidateFrequency =
-            detectedFrequency /
-            harmonic;
-
-
         if (
-            candidateFrequency <
-                MIN_PLAUSIBLE_FUNDAMENTAL_HZ ||
-            candidateFrequency >
-                MAX_PLAUSIBLE_FUNDAMENTAL_HZ
+            !Number.isFinite(candidate) ||
+            candidate <= 0
         ) {
             continue;
         }
 
-
-        const candidateDeviation =
+        const deviation =
             Math.abs(
                 rawCentsDeviation(
-                    candidateFrequency,
+                    candidate,
                     targetFrequency
                 )
             );
 
-
-        /*
-         * Only use harmonic correction if
-         * the corrected pitch is genuinely
-         * close to the expected target.
-         */
         if (
-            candidateDeviation <=
-                MAX_HARMONIC_CORRECTION_CENTS &&
-            candidateDeviation <
-                bestDeviation
+            deviation <
+            bestDeviation
         ) {
             bestFrequency =
-                candidateFrequency;
+                candidate;
 
             bestDeviation =
-                candidateDeviation;
+                deviation;
         }
     }
 
+
+    /*
+     * Very high Pitchy results may represent
+     * strong vocal harmonics instead of the
+     * fundamental frequency.
+     */
+    if (
+        detectedFrequency >=
+        MIN_HARMONIC_CHECK_HZ
+    ) {
+        for (
+            const divisor
+            of HARMONIC_DIVISORS
+        ) {
+            const fundamentalCandidate =
+                detectedFrequency /
+                divisor;
+
+            const harmonicCandidates =
+                getOctaveCandidates(
+                    fundamentalCandidate
+                );
+
+            for (
+                const candidate
+                of harmonicCandidates
+            ) {
+                if (
+                    !Number.isFinite(
+                        candidate
+                    ) ||
+                    candidate <= 0
+                ) {
+                    continue;
+                }
+
+                const deviation =
+                    Math.abs(
+                        rawCentsDeviation(
+                            candidate,
+                            targetFrequency
+                        )
+                    );
+
+                if (
+                    deviation <
+                    bestDeviation
+                ) {
+                    bestFrequency =
+                        candidate;
+
+                    bestDeviation =
+                        deviation;
+                }
+            }
+        }
+    }
+
+
+    /*
+     * Never convert arbitrary noise into
+     * a valid musical note.
+     */
+    if (
+        bestDeviation >
+        MAX_CORRECTION_DISTANCE_CENTS
+    ) {
+        return detectedFrequency;
+    }
 
     return bestFrequency;
 }
@@ -179,14 +224,11 @@ export function calculateCentsDeviation(
             targetFrequency
         );
 
-
     if (
-        normalizedFrequency ===
-        null
+        normalizedFrequency === null
     ) {
         return null;
     }
-
 
     return rawCentsDeviation(
         normalizedFrequency,
@@ -208,12 +250,10 @@ export function calculateFrameScore(
         return 0;
     }
 
-
     const absoluteDeviation =
         Math.abs(
             centsDeviation
         );
-
 
     if (
         absoluteDeviation <=
@@ -222,14 +262,12 @@ export function calculateFrameScore(
         return 100;
     }
 
-
     if (
         absoluteDeviation >=
         MAX_CENTS_ERROR
     ) {
         return 0;
     }
-
 
     return (
         100 *
@@ -256,9 +294,7 @@ export function calculateGaussianWeight(
         DEFAULT_SIGMA_RATIO
 ) {
     if (
-        !Number.isFinite(
-            timeSeconds
-        ) ||
+        !Number.isFinite(timeSeconds) ||
         !Number.isFinite(
             startTimeSeconds
         ) ||
@@ -270,11 +306,9 @@ export function calculateGaussianWeight(
         return 0;
     }
 
-
     const endTimeSeconds =
         startTimeSeconds +
         durationSeconds;
-
 
     if (
         timeSeconds <
@@ -285,21 +319,17 @@ export function calculateGaussianWeight(
         return 0;
     }
 
-
     const center =
         startTimeSeconds +
         durationSeconds / 2;
-
 
     const sigma =
         durationSeconds *
         sigmaRatio;
 
-
     if (sigma <= 0) {
         return 1;
     }
-
 
     const distance =
         (
@@ -307,7 +337,6 @@ export function calculateGaussianWeight(
             center
         ) /
         sigma;
-
 
     return Math.exp(
         -0.5 *
@@ -332,7 +361,6 @@ export function findActiveTargetNote(
         return null;
     }
 
-
     return (
         targetNotes.find(
             (note) => {
@@ -342,7 +370,6 @@ export function findActiveTargetNote(
                 ) {
                     return false;
                 }
-
 
                 const start =
                     Number(
@@ -354,19 +381,23 @@ export function findActiveTargetNote(
                         note.duration_seconds
                     );
 
+                if (
+                    !Number.isFinite(
+                        start
+                    ) ||
+                    !Number.isFinite(
+                        duration
+                    ) ||
+                    duration <= 0
+                ) {
+                    return false;
+                }
+
                 const end =
                     start +
                     duration;
 
-
                 return (
-                    Number.isFinite(
-                        start
-                    ) &&
-                    Number.isFinite(
-                        duration
-                    ) &&
-                    duration > 0 &&
                     timeSeconds >=
                         start &&
                     timeSeconds <
@@ -391,7 +422,6 @@ export function calculateNoteScore(
             DEFAULT_SIGMA_RATIO,
     } = options;
 
-
     if (
         !targetNote ||
         !Array.isArray(
@@ -406,7 +436,6 @@ export function calculateNoteScore(
         };
     }
 
-
     if (
         targetNote.type !==
         "note"
@@ -418,7 +447,6 @@ export function calculateNoteScore(
             validFrameCount: 0,
         };
     }
-
 
     const startTime =
         Number(
@@ -434,11 +462,6 @@ export function calculateNoteScore(
         Number(
             targetNote.frequency_hz
         );
-
-    const endTime =
-        startTime +
-        duration;
-
 
     if (
         !Number.isFinite(
@@ -461,6 +484,9 @@ export function calculateNoteScore(
         };
     }
 
+    const endTime =
+        startTime +
+        duration;
 
     const framesInsideNote =
         pitchFrames.filter(
@@ -469,7 +495,6 @@ export function calculateNoteScore(
                     Number(
                         frame.time
                     );
-
 
                 return (
                     Number.isFinite(
@@ -483,7 +508,6 @@ export function calculateNoteScore(
             }
         );
 
-
     if (
         framesInsideNote.length ===
         0
@@ -496,7 +520,6 @@ export function calculateNoteScore(
         };
     }
 
-
     let weightedScoreSum = 0;
     let totalWeight = 0;
 
@@ -504,7 +527,6 @@ export function calculateNoteScore(
     let validDeviationWeight = 0;
 
     let validFrameCount = 0;
-
 
     for (
         const frame
@@ -520,19 +542,19 @@ export function calculateNoteScore(
                 sigmaRatio
             );
 
-
-        if (weight <= 0) {
+        if (
+            weight <= 0
+        ) {
             continue;
         }
 
-
         /*
-         * Invalid frames remain in the denominator.
-         * Silence therefore still reduces the score.
+         * Missing / unclear frames still count
+         * in the denominator and therefore
+         * lower the final score.
          */
         totalWeight +=
             weight;
-
 
         const frequency =
             Number(
@@ -545,7 +567,6 @@ export function calculateNoteScore(
                 0
             );
 
-
         const isValidPitch =
             Number.isFinite(
                 frequency
@@ -554,14 +575,14 @@ export function calculateNoteScore(
             clarity >=
                 minClarity;
 
-
-        if (!isValidPitch) {
+        if (
+            !isValidPitch
+        ) {
             continue;
         }
 
-
-        validFrameCount += 1;
-
+        validFrameCount +=
+            1;
 
         const centsDeviation =
             calculateCentsDeviation(
@@ -569,17 +590,14 @@ export function calculateNoteScore(
                 targetFrequency
             );
 
-
         const frameScore =
             calculateFrameScore(
                 centsDeviation
             );
 
-
         weightedScoreSum +=
             frameScore *
             weight;
-
 
         if (
             centsDeviation !==
@@ -599,20 +617,17 @@ export function calculateNoteScore(
         }
     }
 
-
     const score =
         totalWeight > 0
             ? weightedScoreSum /
               totalWeight
             : 0;
 
-
     const averageDeviation =
         validDeviationWeight > 0
             ? weightedDeviationSum /
               validDeviationWeight
             : null;
-
 
     return {
         score:
@@ -648,7 +663,6 @@ export function calculateExerciseScore(
             jsonData
         );
 
-
     const targetNotes =
         allEntries.filter(
             (entry) =>
@@ -665,7 +679,6 @@ export function calculateExerciseScore(
                     0
         );
 
-
     if (
         targetNotes.length ===
         0
@@ -679,7 +692,6 @@ export function calculateExerciseScore(
         };
     }
 
-
     const noteScores =
         targetNotes.map(
             (
@@ -692,7 +704,6 @@ export function calculateExerciseScore(
                         pitchFrames,
                         options
                     );
-
 
                 return {
                     noteIndex,
@@ -721,7 +732,6 @@ export function calculateExerciseScore(
             }
         );
 
-
     const score =
         noteScores.reduce(
             (
@@ -733,7 +743,6 @@ export function calculateExerciseScore(
             0
         ) /
         noteScores.length;
-
 
     const deviations =
         noteScores
@@ -750,7 +759,6 @@ export function calculateExerciseScore(
                     )
             );
 
-
     const averageDeviation =
         deviations.length > 0
             ? deviations.reduce(
@@ -765,14 +773,12 @@ export function calculateExerciseScore(
               deviations.length
             : null;
 
-
     const notesWithDetectedPitch =
         noteScores.filter(
             (note) =>
                 note.validFrameCount >
                 0
         ).length;
-
 
     return {
         score:
@@ -791,7 +797,7 @@ export function calculateExerciseScore(
                 ),
 
         totalNotes:
-            noteScores.length,
+            targetNotes.length,
 
         notesWithDetectedPitch,
 
