@@ -471,10 +471,14 @@
         flex-direction: column;
     }
 
-    section {
+
+
+    section:not(.ongoing, .header-layout) {
         width: 80%;
         align-self: center;
     }
+
+
 }
 
 

@@ -5,7 +5,6 @@ import {useMutation, useQueryClient} from "@tanstack/react-query";
 import useAudio from "../hooks/useAudio";
 import {usePitchDetection} from "../hooks/usePitchDetection";
 import NoteHighway from "../components/NoteHighway";
-import ScoreViewer from "../components/ScoreViewer";
 import CentDeviationMeter from "./CentDeviationMeter.jsx";
 
 const ENDING_STATUS = {
@@ -309,8 +308,8 @@ export default function OngoingExercise() {
                     Sing along and keep your pitch as close to the target note as possible.
                 </p>
             </header>
-            <section style={{display: 'flex', flexDirection: 'row'}}>
-                <section className="app-card" style={{padding: "24px", marginBottom: "24px"}}>
+            <section style={{display: 'flex', flexDirection: 'row', height: '560px'}}>
+                <section className="app-card ongoing" style={{padding: "24px", marginBottom: "24px"}} >
                     <div style={{display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "24px"}}>
                         <button type="button" className="btn btn-primary" onClick={() => audio.Toggle.current()}>
                             {audio.isPlaying ? "Pause" : "Start"}
