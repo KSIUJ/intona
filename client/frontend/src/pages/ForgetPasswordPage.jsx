@@ -1,6 +1,7 @@
 import {Link, useNavigate, useSearchParams} from "react-router-dom";
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {useMutation} from "@tanstack/react-query";
+import "./ForgetPassword.css"
 
 const ForgetPasswordPage = () => {
     const navigate = useNavigate();
@@ -8,9 +9,9 @@ const ForgetPasswordPage = () => {
     const [email_value, setEmailValue] = useState(searchParams.get("email") || '')
     const [digits_arr, setDigitsArr] = useState([])
     const [is_resetting, setIsResetting] = useState(false)
-    const [confirm_password_value, setConfirmPasswordValue] = useState('')
     const [new_password_value, setNewPasswordValue] = useState('')
     const [token_payload, setPayload] = useState('')
+    const isFocused = useRef(false)
 
     const mutate_send_request = useMutation({
         mutationFn: (data) => sendRequest(data),
@@ -117,6 +118,7 @@ const ForgetPasswordPage = () => {
     }
 
     const resetPassword = async (data) => {
+        console.log(JSON.stringify(data))
         const api_response = await fetch(`/api/public/email/reset_password`, {
             method: 'POST',
             headers: {
@@ -164,13 +166,35 @@ const ForgetPasswordPage = () => {
         }
     }
 
+    const handlePasteEvent = (e) => {
+        e.preventDefault()
+        let paste = (e.clipboardData || window.clipboardData).getData("text");
+        console.log("test")
+
+        console.log(isFocused.current)
+        console.log(paste.length)
+        if (isFocused.current === true && paste.length === 6) {
+            for (let i = 0; i < 6; i++) {
+                console.log(parseInt(paste[i]))
+                if (!Number.isInteger(parseInt(paste[i]))) {
+                    return
+                }
+            }
+            console.log(Array.from(paste).map((e) => parseInt(e)))
+            setDigitsArr(Array.from(paste).map((e) => parseInt(e)))
+
+        }
+    }
+
 
     useEffect(() => {
         if (is_resetting) {
             window.addEventListener('keydown', handleKeyDownEvent)
+            window.addEventListener('paste', handlePasteEvent)
         }
         return () => {
             window.removeEventListener('keydown', handleKeyDownEvent)
+            window.removeEventListener('paste', handlePasteEvent)
         }
     }, [is_resetting])
 
@@ -235,44 +259,36 @@ const ForgetPasswordPage = () => {
                             </form>
                         </>}
                     {(mutate_send_request.isSuccess && (mutate_handle_verify.isIdle || mutate_handle_verify.isError || mutate_handle_verify.isPending)) && <>
-                        <header className="login-header">
-                            <form onSubmit={handleVerification}>
-                                <h1>Password reset send for {email_value}</h1>
-                                <p>Write verification code below</p>
-                                {Array.from(Array(6)).map((_, index) => {
-                                    // someone with more taste than me can set styles to it
-                                    return <input key={index} id={index.toString()}
-                                                  name={"payload"}
-                                                  type={"text"}
-                                                  readOnly={true}
-                                                  inputMode="numeric"
-                                                  value={Number.isInteger(digits_arr?.[index]) ? digits_arr?.[index] : ''}
-                                                  required={true}/>
-                                })}
+                            <h1 style={{textAlign: "center", overflowWrap: "break-word"}}>Password reset send for {email_value}</h1>
+                            <form onSubmit={handleVerification} className="verification-card">
+                                <p className="verification-title">Write verification code below</p>
+                                <div className="code-inputs-wrapper">
+                                    {Array.from(Array(6)).map((_, index) => {
+                                        // someone with more taste than me can set styles to it
+                                        return <input key={index} id={index.toString()}
+                                                      className={"code-input"}
+                                                      name={"payload"}
+                                                      type={"text"}
+                                                      inputMode="numeric"
+                                                      value={Number.isInteger(digits_arr?.[index]) ? digits_arr?.[index] : ''}
+                                                      required={true}
+                                                      onBlur={() => isFocused.current = false}
+                                                      onFocus={() => isFocused.current = true}
+                                        />
+                                    })}
+                                </div>
 
-                                <button className="sign-in-button" type="submit">
+
+                                <button className="verify-btn" type="submit">
                                     Verify
                                 </button>
                             </form>
-                        </header>
 
 
                     </>}
                     {mutate_handle_verify.isSuccess && <>
                         <form className="login-form" onSubmit={handlePasswordChange}>
                             <div className="form-group">
-                                <label htmlFor="email">Old password</label>
-
-                                <input
-                                    id="old_password"
-                                    name="old_password"
-                                    type="old_password"
-                                    placeholder="Enter your new_password"
-                                    required
-                                    value={new_password_value}
-                                    onChange={(e) => setNewPasswordValue(e.target.value)}
-                                />
-
                                 <label htmlFor="email">New password</label>
                                 <input
                                     id="new_password"
@@ -280,13 +296,13 @@ const ForgetPasswordPage = () => {
                                     type="new_password"
                                     placeholder="Confirm your new password"
                                     required
-                                    value={confirm_password_value}
-                                    onChange={(e) => setConfirmPasswordValue(e.target.value)}
+                                    value={new_password_value}
+                                    onChange={(e) => setNewPasswordValue(e.target.value)}
                                 />
                             </div>
 
                             <button className="sign-in-button" type="submit">
-                                Send reset code
+                                Change password
                             </button>
                         </form>
                     </>}
