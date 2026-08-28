@@ -214,7 +214,8 @@ export function calculateNoteScore(
     pitchFrames,
     options = {}
 ) {
-    const { minClarity = 0.9, sigmaRatio = 0.25, currentTime = null } = options;
+    // Obniżona czułość domyślna na 0.7
+    const { minClarity = 0.7, sigmaRatio = 0.25, currentTime = null } = options;
 
     if (!targetNote || targetNote.type !== "note") {
         return { score: null, averageDeviation: null, frameCount: 0, validFrameCount: 0 };
@@ -266,8 +267,7 @@ export function calculateNoteScore(
         if (centsDeviation !== null && Number.isFinite(centsDeviation)) {
             let absDeviation = Math.abs(centsDeviation);
 
-            // DEADZONE: Tolerancja na naturalne wibracje głosu
-            // Jeśli trafiasz z dokładnością do 10 centów, uznajemy to za czyste 0 dewiacji
+            // Deadzone: Tolerancja na naturalne wibracje głosu
             if (absDeviation <= 10) {
                 absDeviation = 0;
             }
@@ -281,7 +281,8 @@ export function calculateNoteScore(
     const timeToEvaluate = currentTime !== null ? Math.min(currentTime, endTime) : endTime;
     const elapsedDurationForNote = Math.max(0, timeToEvaluate - startTime);
 
-    const expectedFrameCount = Math.floor(elapsedDurationForNote / 0.08);
+    // Zmniejszony rygor: oceniamy, czy brakuje klatek przy założeniu, że powinno być ich ok. 6 na sekundę (0.15s), a nie 12.
+    const expectedFrameCount = Math.floor(elapsedDurationForNote / 0.15);
     const missingFrames = Math.max(0, expectedFrameCount - framesInsideNote.length);
 
     if (missingFrames > 0) {
