@@ -5,14 +5,16 @@
  * - reference notes come from results.json
  * - rests are ignored
  * - detected microphone frequency is compared with target frequency in cents
+ * - octave differences are normalized away (singer's natural register
+ *   may sit an octave above/below the reference track)
  * - frames near the middle of a target note have higher importance
  *   using a Gaussian time weight
  * - unclear / missing pitch frames count as 0 points
  */
 
-const DEFAULT_MIN_CLARITY = 0.9;
-const PERFECT_CENTS = 15;
-const MAX_CENTS_ERROR = 50;
+const DEFAULT_MIN_CLARITY = 0.65;
+const PERFECT_CENTS = 30;
+const MAX_CENTS_ERROR = 70;
 const DEFAULT_SIGMA_RATIO = 0.25;
 
 /**
@@ -37,6 +39,31 @@ export function normalizeTargetNotes(data) {
     }
 
     return [];
+}
+
+/**
+ * Shifts detectedFrequency by whole octaves so it lands as close as
+ * possible to targetFrequency.
+ *
+ * This lets a singer match a melody in a comfortable register (e.g.
+ * one octave below a reference track) without being penalized for
+ * "wrong pitch" when the pitch class is actually correct.
+ *
+ * Exported so callers outside this module (e.g. the live cents meter
+ * in OngoingExercise) can apply the same normalization consistently.
+ */
+export function normalizeToNearestOctave(detectedFrequency, targetFrequency) {
+    if (
+        !Number.isFinite(detectedFrequency) ||
+        !Number.isFinite(targetFrequency) ||
+        detectedFrequency <= 0 ||
+        targetFrequency <= 0
+    ) {
+        return detectedFrequency;
+    }
+
+    const octaveShift = Math.round(Math.log2(targetFrequency / detectedFrequency));
+    return detectedFrequency * Math.pow(2, octaveShift);
 }
 
 /**
@@ -322,9 +349,19 @@ export function calculateNoteScore(
 
         validFrameCount += 1;
 
+        // Shift the detected frequency by whole octaves toward the
+        // target before measuring the deviation, so singing the
+        // correct pitch class in a different octave isn't penalized
+        // as if it were a completely wrong note.
+        const normalizedFrequency =
+            normalizeToNearestOctave(
+                frequency,
+                targetFrequency
+            );
+
         const centsDeviation =
             calculateCentsDeviation(
-                frequency,
+                normalizedFrequency,
                 targetFrequency
             );
 

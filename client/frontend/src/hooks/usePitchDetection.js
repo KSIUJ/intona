@@ -16,8 +16,9 @@ const NOTE_NAMES = [
   "B",
 ];
 
-const MIN_CLARITY = 0.9;
-
+const MIN_CLARITY = 0.7;
+const MIN_VOICE_FREQ = 70;   
+const MAX_VOICE_FREQ = 1100;
 function frequencyToPitchData(frequency) {
   if (!frequency || frequency <= 0) {
     return {
@@ -95,6 +96,7 @@ export function usePitchDetection(onFrame) {
   const animationFrameRef =
     useRef(null);
 
+  const lastStateUpdateRef = useRef(0);
   /*
    * Store the latest callback in a ref.
    *
@@ -188,86 +190,42 @@ export function usePitchDetection(onFrame) {
 
         audioContextRef.current =
           audioContext;
-
+        
         const detectPitch = () => {
-          analyser
-            .getFloatTimeDomainData(
-              input
-            );
+    analyser.getFloatTimeDomainData(input);
+    const [pitch, pitchClarity] = detector.findPitch(input, audioContext.sampleRate);
+    const validPitch =
+        pitchClarity >= MIN_CLARITY &&
+        Number.isFinite(pitch) &&
+        pitch >= MIN_VOICE_FREQ &&
+        pitch <= MAX_VOICE_FREQ;
 
-          const [
-            pitch,
-            pitchClarity,
-          ] =
-            detector.findPitch(
-              input,
-              audioContext.sampleRate
-            );
+    onFrameRef.current?.({
+        frequency: validPitch ? pitch : null,
+        clarity: Number.isFinite(pitchClarity) ? pitchClarity : 0,
+        isValid: validPitch,
+    });
 
-          const validPitch =
-            pitchClarity >=
-              MIN_CLARITY &&
-            Number.isFinite(pitch) &&
-            pitch > 0;
+    const now = performance.now();
+    if (!lastStateUpdateRef.current || now - lastStateUpdateRef.current >= 80) {
+        lastStateUpdateRef.current = now;
 
-          setClarity(
-            Number.isFinite(
-              pitchClarity
-            )
-              ? pitchClarity
-              : 0
-          );
+        setClarity(Number.isFinite(pitchClarity) ? pitchClarity : 0);
 
-          /*
-           * Send EVERY frame to scoring.
-           *
-           * Invalid pitch gets frequency = null,
-           * but its clarity is still preserved.
-           */
-          onFrameRef.current?.({
-            frequency:
-              validPitch
-                ? pitch
-                : null,
-
-            clarity:
-              Number.isFinite(
-                pitchClarity
-              )
-                ? pitchClarity
-                : 0,
-
-            isValid:
-              validPitch,
-          });
-
-          if (validPitch) {
-            const pitchData =
-              frequencyToPitchData(
-                pitch
-              );
-
+        if (validPitch) {
+            const pitchData = frequencyToPitchData(pitch);
             setFrequency(pitch);
-
-            setNote(
-              pitchData.note
-            );
-
-            setCents(
-              pitchData.cents
-            );
-          } else {
+            setNote(pitchData.note);
+            setCents(pitchData.cents);
+        } else {
             setFrequency(null);
             setNote(null);
             setCents(null);
-          }
+        }
+    }
 
-          animationFrameRef.current =
-            requestAnimationFrame(
-              detectPitch
-            );
-        };
-
+    animationFrameRef.current = requestAnimationFrame(detectPitch);
+};
         setIsListening(true);
 
         detectPitch();
