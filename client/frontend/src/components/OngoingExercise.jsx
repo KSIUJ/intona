@@ -21,6 +21,7 @@ export default function OngoingExercise() {
     const location_data = useLocation();
     const {state} = location_data;
 
+    console.log(`State ${JSON.stringify(state)}`)
     // Audio (fortepian) gra z piano_presigned_url - osobny link od pliku z nutami
     const audio = useAudio(state.piano_presigned_url);
 
@@ -37,9 +38,6 @@ export default function OngoingExercise() {
 
     const [time_in_tune, setTimeInTune] = useState(0);
     const [average_deviation, setAverageDeviation] = useState(0);
-
-    // Nuty parsowane po stronie przegladarki z pliku MusicXML (source_presigned_url)
-    const [notes, setNotes] = useState([]);
 
     const back_up_interval_id = useRef(0);
     const deviationSamplesRef = useRef([]);

@@ -1,8 +1,8 @@
-import { useNavigate, useParams } from "react-router-dom";
+import {useNavigate, useParams} from "react-router-dom";
 import {useMutation, useQuery} from "@tanstack/react-query";
 
 export default function ExercisePage() {
-    const { exercise_name, id } = useParams();
+    const {exercise_name, id} = useParams();
     const navigate = useNavigate();
 
     const getData = async (id) => {
@@ -24,17 +24,24 @@ export default function ExercisePage() {
         mutationFn: () => getData(id),
         onSuccess(data) {
             console.log("successfully started exercise")
-            navigate(`/exercises/${id}/${exercise_slug}/start`, {
-            state: {
-                piano_presigned_url: data.piano_presigned_url,
-                source_presigned_url: data.source_presigned_url,
-                processed_data: data.processed_data,
-                log_id: data.log_id,
-                exercise_access_token: data.exercise_access_token,
-            },
-        });
+            localStorage.removeItem("average_deviation")
+            localStorage.removeItem('exercise_access_token')
+            localStorage.removeItem('time')
+            localStorage.removeItem('time_in_tune')
+            navigate(`/exercises/${id}/${exercise_name}/start`, {
+                state: {
+                    piano_presigned_url: data.piano_presigned_url,
+                    source_presigned_url: data.source_presigned_url,
+                    processed_data: data.processed_data,
+                    log_id: data.log_id,
+                    exercise_access_token: data.exercise_access_token,
+                },
+            });
+            console.log("successfully started exercise2")
+
         },
         onError(error) {
+            console.log("ERRRRRRRRRRRRRRRRRRRRRor")
             console.log(JSON.stringify(error))
             navigate("/")
         }
@@ -56,7 +63,7 @@ export default function ExercisePage() {
                     ← Back
                 </button>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{display: "flex", alignItems: "center", gap: "12px"}}>
                     <div
                         style={{
                             color: "var(--color-primary)",
@@ -68,18 +75,18 @@ export default function ExercisePage() {
                     >
                         INTONA
                     </div>
-                    <h1 style={{ margin: 0 }}>{exercise_name ?? "Exercise"}</h1>
+                    <h1 style={{margin: 0}}>{exercise_name ?? "Exercise"}</h1>
                 </div>
             </div>
 
-            <div className="app-card" style={{ padding: "22px" }}>
+            <div className="app-card" style={{padding: "22px"}}>
                 <h3>Ready to start?</h3>
 
-                <p className="page-subtitle" style={{ marginBottom: "20px" }}>
+                <p className="page-subtitle" style={{marginBottom: "20px"}}>
                     Once you click Start, your microphone and the track will begin — sing along with the notes shown.
                 </p>
 
-                <div style={{ display: "flex", justifyContent: "center" }}>
+                <div style={{display: "flex", justifyContent: "center"}}>
                     <button type="button" className="btn btn-primary" onClick={() => mutate(id)}>
                         Start
                     </button>
