@@ -269,12 +269,19 @@ async def end_exercise(db: SessionDep, exercise_log_id: str, exercise_result: Ex
     exercise_log_id = int(exercise_log_id)
 
     exercise_log = await db.exec(select(ExerciseLogs).where(ExerciseLogs.id == exercise_log_id))
-    exercise_log = exercise_log.one()
+    exercise_log = exercise_log.first()
+
+    if not exercise_log:
+        raise HTTPException(status_code=404, detail="Exercise LOG not found")
 
     attempting_user_id = exercise_log.attempting_user_id
 
     user_stats = await db.exec(select(UserStats).where(UserStats.id == attempting_user_id))
-    user_stats = user_stats.one()
+    user_stats = user_stats.first()
+
+    if not user_stats:
+        raise HTTPException(status_code=404, detail="User Stats not found")
+
 
     exercise_log.exercise_duration = exercise_result.exercise_duration
     exercise_log.time_in_tune = exercise_result.time_in_tune

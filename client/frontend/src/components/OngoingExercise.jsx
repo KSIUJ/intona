@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from "react";
-import {useNavigate, useLocation} from "react-router-dom";
+import {useNavigate, useLocation, useParams} from "react-router-dom";
 import {useMutation, useQueryClient} from "@tanstack/react-query";
 
 import useAudio from "../hooks/useAudio";
@@ -16,6 +16,7 @@ const ENDING_STATUS = {
 
 export default function OngoingExercise() {
     const queryClient = useQueryClient();
+     const { id, exercise_slug } = useParams();
     const navigate = useNavigate();
     const location_data = useLocation();
     const {state} = location_data;
@@ -112,10 +113,18 @@ export default function OngoingExercise() {
                 variables.average_deviation,
                 variables.exercise_end_status
             ),
-        onSuccess() {
+        onSuccess(data) {
+            localStorage.removeItem("exercise_access_token")
             console.log("successfully ended exercise");
             queryClient.invalidateQueries({queryKey: ["dashboard"]});
-            navigate("/");
+            navigate(`/exercises/${id}/${exercise_slug}/summary`, {
+                state: {
+                    time_in_tune: data.time_in_tune,
+                    average_deviation: data.average_deviation,
+                    exercise_duration: data.exercise_duration,
+                    exercise_end_status: data.exercise_end_status
+                }
+            });
         },
         onError(error) {
             console.log("Unsuccessfully ended exercise");
@@ -149,7 +158,9 @@ export default function OngoingExercise() {
         exercise_end_status
     ) => {
         stopMicrophone();
-        localStorage.clear();
+        localStorage.removeItem("time")
+        localStorage.removeItem("time_in_tune")
+        localStorage.removeItem("average_deviation")
 
         if (back_up_interval_id.current) {
             clearInterval(back_up_interval_id.current);

@@ -24,14 +24,14 @@ class ExerciseInfo(ExerciseBase):
 
 class ExerciseResult(BaseModel):
     exercise_duration: float = Field(description="Exercise duration in seconds", ge=0)
-    time_in_tune: float = Field(description="Time in tune in scale 1-100%", ge=0, lt=100)
-    average_deviation: float = Field(description="Average deviation in tune in scale 1-100%", ge=0, lt=100)
+    time_in_tune: float = Field(description="Time in tune in scale 1-100%", ge=0, le=100)
+    average_deviation: float = Field(description="Average deviation in tune in scale 1-100%", ge=0, le=100)
     exercise_end_status: EndingStatusEnum = Field(description="Ending status of exercise", examples=["Stopped","Exited"])
 
 class ExerciseEndResult(BaseModel):
     exercise_duration: float = Field(description="Exercise duration in seconds, as persisted", ge=0)
-    time_in_tune: float = Field(description="Time in tune in scale 0-100%, as persisted", ge=0, lt=100)
-    average_deviation: float = Field(description="Average deviation in cents, as persisted", ge=0, lt=100)
+    time_in_tune: float = Field(description="Time in tune in scale 0-100%, as persisted", ge=0, le=100)
+    average_deviation: float = Field(description="Average deviation in cents, as persisted", ge=0, le=100)
     exercise_end_status: EndingStatusEnum = Field(description="Final status of the exercise log", examples=["Stopped", "Ended"])
     counted_toward_stats: bool = Field(description="True if this attempt updated the user's stats (average score, mastery, streak)")
 
