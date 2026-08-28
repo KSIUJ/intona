@@ -360,7 +360,7 @@ export default function OngoingExercise() {
                 </section>
                 <CentDeviationMeter cents={cents} isListening={isListening}/>
             </section>
-            <section className="app-card" style={{padding: "24px"}}>
+            <section className="app-card ongoing" style={{padding: "24px"}}>
                 <h2>Live results</h2>
 
                 <p>
