@@ -34,17 +34,16 @@
     align-items: center;
     gap: 16px;
     user-select: none;
-    margin: auto 0;
+    height: 100%;
+    box-sizing: border-box;
 }
 
 .cents-meter-vertical-wrapper {
     display: flex;
     align-items: center;
     gap: 10px;
-    height: 465px;
-    height: stretch;
+    height: 100%;
 }
-
 .cents-meter-vertical-labels {
     display: flex;
     flex-direction: column;
@@ -122,6 +121,6 @@
     border-radius: var(--radius-medium);
     box-shadow: var(--shadow-small);
     width: 25%;
-    margin-bottom: 23px;
-    height: stretch;
+    box-sizing: border-box;
+    height: 100%;
 }

@@ -2,18 +2,40 @@ import { useEffect, useRef, useState } from "react";
 import { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
 import { extractNotesFromOSMD } from "../utils/extractNotesFromOSMD";
 
-// Kolory zgodne z :root w index.css
+
 const COLOR_PRIMARY = "#7c4fe0";
 const COLOR_BORDER = "rgba(124, 79, 224, 0.25)";
 const COLOR_TEXT = "#18171a";
-
+const COLOR_GRID_LINE = "rgba(24, 23, 26, 0.10)";
+const COLOR_GRID_LABEL = "rgba(24, 23, 26, 0.45)";
+const HIGHWAY_HEIGHT = 520;
+const NOTE_HEIGHT = 40;
+const MIN_NOTE_WIDTH = 50;
+const NATURAL_NOTE_NAMES = {
+    0: "C",
+    2: "D",
+    4: "E",
+    5: "F",
+    7: "G",
+    9: "A",
+    11: "B",
+};
+function halfToneToNoteName(halfTone) {
+    const rounded = Math.round(halfTone);
+    const midi = rounded + 12;
+    const chromaIndex = ((midi % 12) + 12) % 12;
+    const octave = Math.floor(midi / 12) - 1;
+    const naturalName = NATURAL_NOTE_NAMES[chromaIndex];
+    return naturalName ? `${naturalName}${octave}` : null;
+}
 export default function NoteHighway({ musicXmlUrl, audioRef }) {
     const canvasRef = useRef(null);
+    const wrapperRef = useRef(null);
     const hiddenOsmdContainerRef = useRef(null);
     const [notes, setNotes] = useState([]);
     const [loadError, setLoadError] = useState(null);
 
-    // Krok 1: pobierz i sparsuj MusicXML, zeby dostac liste nut
+  
     useEffect(() => {
         if (!musicXmlUrl || !hiddenOsmdContainerRef.current) return;
 
@@ -45,7 +67,32 @@ export default function NoteHighway({ musicXmlUrl, audioRef }) {
         };
     }, [musicXmlUrl]);
 
-    // Krok 2: rysuj stylizowane prostokaty z tekstem nad nutami, bez kolorowania wg cents
+useEffect(() => {
+        if (!canvasRef.current || !wrapperRef.current) return;
+
+        const canvas = canvasRef.current;
+        const wrapper = wrapperRef.current;
+
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const cssWidth = wrapper.clientWidth;
+
+            canvas.width = Math.round(cssWidth * dpr);
+            canvas.height = Math.round(HIGHWAY_HEIGHT * dpr);
+            canvas.style.width = `${cssWidth}px`;
+            canvas.style.height = `${HIGHWAY_HEIGHT}px`;
+
+            const context = canvas.getContext("2d");
+            context.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        resizeCanvas();
+
+        const resizeObserver = new ResizeObserver(resizeCanvas);
+        resizeObserver.observe(wrapper);
+
+        return () => resizeObserver.disconnect();
+    }, []);
     useEffect(() => {
         if (!canvasRef.current) return;
         if (!notes || notes.length === 0) return;
@@ -57,30 +104,73 @@ export default function NoteHighway({ musicXmlUrl, audioRef }) {
         const playheadX = 120;
         const topY = 40;
         const bottomY = canvas.height - 24;
-
+        const verticalMargin = NOTE_HEIGHT / 2 + 40;
         let animationFrameId = null;
 
         const halfTones = notes.map((note) => note.halfTone);
-        const minHalfTone = Math.min(...halfTones);
-        const maxHalfTone = Math.max(...halfTones);
-
-        function mapPitchToY(halfTone) {
+        const minHalfTone = Math.min(...halfTones) - 2;
+        const maxHalfTone = Math.max(...halfTones) + 2;
+        function getCssSize() {
+            const dpr = window.devicePixelRatio || 1;
+            return {
+                width: canvas.width / dpr,
+                height: canvas.height / dpr,
+            };
+        }
+        function mapPitchToY(halfTone, topY, bottomY) {
             if (maxHalfTone === minHalfTone) return (topY + bottomY) / 2;
             const proportion = (halfTone - minHalfTone) / (maxHalfTone - minHalfTone);
             return bottomY - proportion * (bottomY - topY);
         }
 
+        function drawPitchGrid(cssWidth, cssHeight, topY, bottomY) {
+            context.save();
+
+            for (let halfTone = Math.ceil(minHalfTone); halfTone <= Math.floor(maxHalfTone); halfTone++) {
+                const noteName = halfToneToNoteName(halfTone);
+                if (!noteName) continue;
+
+                const y = Math.round(mapPitchToY(halfTone, topY, bottomY));
+
+                context.strokeStyle = COLOR_GRID_LINE;
+                context.lineWidth = 1;
+                context.beginPath();
+                context.moveTo(0, y);
+                context.lineTo(cssWidth, y);
+                context.stroke();
+
+                const labelY = Math.min(cssHeight - 4, Math.max(12, y - 2));
+
+                context.fillStyle = COLOR_GRID_LABEL;
+                context.font = "11px Inter, sans-serif";
+                context.textAlign = "left";
+                context.textBaseline = "bottom";
+                context.fillText(noteName, 6, labelY);
+            }
+
+            context.restore();
+        }
+
         function draw() {
+            const { width: cssWidth, height: cssHeight } = getCssSize();
+            const topY = verticalMargin;
+            const bottomY = cssHeight - verticalMargin;
             const elapsedSeconds = audioRef?.current?.currentTime ?? 0;
 
-            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.clearRect(0, 0, cssWidth, cssHeight);
 
+            drawPitchGrid(cssWidth, cssHeight, topY, bottomY);
+            
             for (let i = 0; i < notes.length; i++) {
                 const note = notes[i];
                 const noteEnd = note.startTimeSeconds + note.durationSeconds;
-                const noteX = playheadX + (note.startTimeSeconds - elapsedSeconds) * pixelsPerSecond;
-                const noteWidth = note.durationSeconds * pixelsPerSecond;
-                const y = mapPitchToY(note.halfTone);
+                const noteX = Math.round(playheadX + (note.startTimeSeconds - elapsedSeconds) * pixelsPerSecond);
+                const noteWidth = Math.max(MIN_NOTE_WIDTH, Math.round(note.durationSeconds * pixelsPerSecond));
+                const centerY = mapPitchToY(note.halfTone, topY, bottomY);
+                const rawY = centerY - NOTE_HEIGHT / 2;
+                const y = Math.round(Math.max(0, Math.min(cssHeight - NOTE_HEIGHT, rawY)));
+
+                if (noteX + noteWidth < -50 || noteX > cssWidth + 50) continue;
 
                 const isActive = elapsedSeconds >= note.startTimeSeconds && elapsedSeconds <= noteEnd;
 
@@ -94,7 +184,7 @@ export default function NoteHighway({ musicXmlUrl, audioRef }) {
                 context.strokeStyle = COLOR_BORDER;
                 context.lineWidth = 1;
                 context.beginPath();
-                context.roundRect(noteX, y, noteWidth, 20, 6);
+                context.roundRect(noteX, y, noteWidth, NOTE_HEIGHT, 10);
                 context.fill();
                 context.stroke();
                 context.restore();
@@ -102,7 +192,7 @@ export default function NoteHighway({ musicXmlUrl, audioRef }) {
                 const label = note.lyricText ?? "";
                 if (label && label.trim() !== "") {
                     context.fillStyle = COLOR_TEXT;
-                    context.font = isActive ? "bold 13px Inter, sans-serif" : "13px Inter, sans-serif";
+                    context.font = isActive ? "bold 14px Inter, sans-serif" : "14px Inter, sans-serif";
                     context.textAlign = "center";
                     context.textBaseline = "bottom";
                     context.fillText(label, noteX + noteWidth / 2, y - 8);
@@ -128,27 +218,24 @@ export default function NoteHighway({ musicXmlUrl, audioRef }) {
         };
     }, [notes, audioRef]);
 
-    return (
-        <div>
+     return (
+        <div ref={wrapperRef} style={{ width: "100%", height: `${HIGHWAY_HEIGHT}px` }}>
             {loadError && <p style={{ color: "red" }}>Błąd: {loadError}</p>}
 
-            {/* Ukryty kontener, ktorego uzywa OSMD wewnetrznie do parsowania */}
             <div ref={hiddenOsmdContainerRef} style={{ display: "none" }} />
 
             <canvas
                 ref={canvasRef}
-                width={800}
-                height={200}
                 className="app-card"
                 style={{
-                    width: "100%",
-                    maxWidth: "800px",
-                    height: "auto",
-                    aspectRatio: "800 / 200",
-                    borderRadius: "var(--radius-medium)",
                     display: "block",
+                    width: "100%",
+                    height: `${HIGHWAY_HEIGHT}px`,
+                    borderRadius: "var(--radius-medium)",
                 }}
             />
         </div>
     );
 }
+
+
