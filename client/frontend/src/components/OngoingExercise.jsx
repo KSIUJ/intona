@@ -200,19 +200,13 @@ export default function OngoingExercise() {
     const handlePitchFrame = useCallback(
         (frame) => {
             const audioElement = audio.audioRef.current;
-
             if (!audioElement || audioElement.paused || audioElement.ended) {
                 return;
             }
 
-            const now = performance.now();
-            if (lastFrameTimeRef.current && now - lastFrameTimeRef.current < 80) {
-                return;
-            }
-            lastFrameTimeRef.current = now;
-
             const timeSeconds = audioElement.currentTime;
 
+            // 1. Zapisujemy KAŻDĄ klatkę (ok. 60 FPS), żeby nie zgubić krótkich dźwięków
             pitchFramesRef.current.push({
                 time: timeSeconds,
                 frequency: frame.frequency,
@@ -220,31 +214,34 @@ export default function OngoingExercise() {
                 isValid: frame.isValid,
             });
 
+            // 2. Natychmiastowa aktualizacja licznika na ekranie
             const activeTargetNote = findActiveTargetNote(scoringEntriesRef.current, timeSeconds);
-
             if (activeTargetNote && frame.isValid && Number.isFinite(frame.frequency)) {
                 const deviation = calculateCentsDeviation(frame.frequency, Number(activeTargetNote.frequency_hz));
                 if (deviation !== null && Number.isFinite(deviation)) {
-                    const meterDeviation = Math.max(-50, Math.min(50, Math.round(deviation)));
-                    setTargetCents(meterDeviation);
+                    setTargetCents(Math.max(-50, Math.min(50, Math.round(deviation))));
                 }
             } else {
                 setTargetCents(null);
             }
 
-            const elapsedEntries = scoringEntriesRef.current.filter((entry) => {
+            // 3. Ograniczenie częstotliwości ciężkich obliczeń dla wyniku ogólnego (np. co 250ms)
+            const now = performance.now();
+            if (lastFrameTimeRef.current && now - lastFrameTimeRef.current < 250) {
+                return;
+            }
+            lastFrameTimeRef.current = now;
+
+            // 4. Bierzemy do oceny TYLKO W PEŁNI ZAKOŃCZONE NUTY
+            // Eliminuje to błąd, gdzie system zaniżał wynik w pierwszej milisekundzie trwania nuty
+            const completedEntries = scoringEntriesRef.current.filter((entry) => {
                 if (entry?.type !== "note") return false;
-                const start = Number(entry.start_time_seconds);
-                return Number.isFinite(start) && start <= timeSeconds;
+                const end = Number(entry.start_time_seconds) + Number(entry.duration_seconds);
+                return Number.isFinite(end) && end <= timeSeconds;
             });
 
-            if (elapsedEntries.length > 0) {
-                const liveResult = calculateExerciseScore(
-                    elapsedEntries,
-                    pitchFramesRef.current,
-                    { currentTime: timeSeconds }
-                );
-
+            if (completedEntries.length > 0) {
+                const liveResult = calculateExerciseScore(completedEntries, pitchFramesRef.current);
                 const liveScore = liveResult.score;
                 const liveDeviation = clampDeviationForBackend(liveResult.averageDeviation ?? 0);
 

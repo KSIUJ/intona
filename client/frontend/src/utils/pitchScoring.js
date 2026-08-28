@@ -214,8 +214,8 @@ export function calculateNoteScore(
     pitchFrames,
     options = {}
 ) {
-    // Obniżona czułość domyślna na 0.7
-    const { minClarity = 0.7, sigmaRatio = 0.25, currentTime = null } = options;
+    // Obniżona czystość (0.6) wybacza spółgłoski i nabieranie powietrza
+    const { minClarity = 0.6, sigmaRatio = 0.25 } = options;
 
     if (!targetNote || targetNote.type !== "note") {
         return { score: null, averageDeviation: null, frameCount: 0, validFrameCount: 0 };
@@ -226,76 +226,73 @@ export function calculateNoteScore(
     const targetFrequency = Number(targetNote.frequency_hz);
     const endTime = startTime + duration;
 
-    if (
-        !Number.isFinite(startTime) ||
-        duration <= 0 ||
-        !Number.isFinite(targetFrequency) ||
-        targetFrequency <= 0
-    ) {
+    if (!Number.isFinite(startTime) || duration <= 0 || !Number.isFinite(targetFrequency)) {
         return { score: 0, averageDeviation: null, frameCount: 0, validFrameCount: 0 };
     }
 
+    // Dodajemy ludzki margines błędu +/- 0.15s (łapie spóźnienia i szybsze wejścia w słowo)
     const framesInsideNote = pitchFrames.filter((frame) => {
         const time = Number(frame.time);
-        return Number.isFinite(time) && time >= startTime && time < endTime;
+        return Number.isFinite(time) && time >= (startTime - 0.15) && time <= (endTime + 0.15);
     });
 
-    let weightedScoreSum = 0;
-    let totalWeight = 0;
-    let weightedDeviationSum = 0;
-    let validDeviationWeight = 0;
+    let validScoreSum = 0;
+    let validWeightSum = 0;
+    let validDeviationSum = 0;
     let validFrameCount = 0;
 
+    // Przeliczamy TYLKO klatki, w których był słyszalny jakikolwiek śpiew
     for (const frame of framesInsideNote) {
-        const weight = calculateGaussianWeight(frame.time, startTime, duration, sigmaRatio);
-        if (weight <= 0) continue;
-
-        totalWeight += weight;
-
         const frequency = Number(frame.frequency);
         const clarity = Number(frame.clarity ?? 0);
+
         const isValidPitch = Number.isFinite(frequency) && frequency > 0 && clarity >= minClarity;
 
-        if (!isValidPitch) continue;
+        if (isValidPitch) {
+            // Zabezpieczenie przed wagą 0
+            const weight = calculateGaussianWeight(frame.time, startTime, duration, sigmaRatio) || 0.1;
 
-        validFrameCount += 1;
-        const centsDeviation = calculateCentsDeviation(frequency, targetFrequency);
-        const frameScore = calculateFrameScore(centsDeviation);
+            validWeightSum += weight;
+            validFrameCount++;
 
-        weightedScoreSum += frameScore * weight;
+            const centsDeviation = calculateCentsDeviation(frequency, targetFrequency);
+            const frameScore = calculateFrameScore(centsDeviation);
 
-        if (centsDeviation !== null && Number.isFinite(centsDeviation)) {
-            let absDeviation = Math.abs(centsDeviation);
+            validScoreSum += frameScore * weight;
 
-            // Deadzone: Tolerancja na naturalne wibracje głosu
-            if (absDeviation <= 10) {
-                absDeviation = 0;
+            if (centsDeviation !== null && Number.isFinite(centsDeviation)) {
+                let absDeviation = Math.abs(centsDeviation);
+
+                // Deadzone: ludzkie vibrato do 15 centów to perfekcyjne 0
+                if (absDeviation <= 15) {
+                    absDeviation = 0;
+                }
+
+                // Odcięcie max błędu na 50 centów
+                validDeviationSum += Math.min(absDeviation, 50) * weight;
             }
-
-            const cappedDeviation = Math.min(absDeviation, 50);
-            weightedDeviationSum += cappedDeviation * weight;
-            validDeviationWeight += weight;
         }
     }
 
-    const timeToEvaluate = currentTime !== null ? Math.min(currentTime, endTime) : endTime;
-    const elapsedDurationForNote = Math.max(0, timeToEvaluate - startTime);
-
-    // Zmniejszony rygor: oceniamy, czy brakuje klatek przy założeniu, że powinno być ich ok. 6 na sekundę (0.15s), a nie 12.
-    const expectedFrameCount = Math.floor(elapsedDurationForNote / 0.15);
-    const missingFrames = Math.max(0, expectedFrameCount - framesInsideNote.length);
-
-    if (missingFrames > 0) {
-        const averageExpectedWeight = 0.5;
-        totalWeight += (missingFrames * averageExpectedWeight);
+    // Jeśli podczas trwania nuty nie było w ogóle dźwięku:
+    if (validFrameCount === 0 || validWeightSum <= 0) {
+        return { score: 0, averageDeviation: null, frameCount: framesInsideNote.length, validFrameCount: 0 };
     }
 
-    const score = totalWeight > 0 ? weightedScoreSum / totalWeight : 0;
-    const averageDeviation = validDeviationWeight > 0 ? weightedDeviationSum / validDeviationWeight : null;
+    // Średnia ocen wyciągnięta WYŁĄCZNIE z momentów, w których śpiewałeś
+    const rawScore = validScoreSum / validWeightSum;
+    const averageDeviation = validDeviationSum / validWeightSum;
+
+    // Lekka ochrona: jeśli piknąłeś tylko na 3 klatki (ok. 50 milisekund), wynik jest proporcjonalnie ucinany.
+    // Jeśli zaśpiewałeś min. 4-5 klatek, dostajesz 100% swojej celności (bardzo łagodne).
+    let finalScore = rawScore;
+    if (validFrameCount < 5) {
+        finalScore = rawScore * (validFrameCount / 5);
+    }
 
     return {
-        score: Number(score.toFixed(2)),
-        averageDeviation: averageDeviation === null ? null : Number(averageDeviation.toFixed(2)),
+        score: Number(finalScore.toFixed(2)),
+        averageDeviation: Number(averageDeviation.toFixed(2)),
         frameCount: framesInsideNote.length,
         validFrameCount
     };
