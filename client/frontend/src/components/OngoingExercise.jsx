@@ -376,17 +376,59 @@ export default function OngoingExercise() {
         
         <CentDeviationMeter cents={cents} isListening={isListening}/>
 </section>
-            <section className="app-card ongoing" style={{padding: "24px"}}>
-                <h2>Live results</h2>
+            <section
+    className="app-card ongoing"
+    style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
+        width: '90vw',
+        maxWidth: '90vw',
+        marginLeft: 'calc(50% - 45vw)',
+        marginRight: 'calc(50% - 45vw)',
+        marginBottom: '24px',
+        padding: '24px',
+        boxSizing: 'border-box',
+    }}
+>
+    <h2 style={{ margin: 0, textAlign: "center"}}>Live results</h2>
 
-                <p>
-                    Average deviation: <strong>{average_deviation.toFixed(2)} cents</strong>
-                </p>
+    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+        <div
+            style={{
+                flex: '1 1 200px',
+                backgroundColor: 'rgba(124, 79, 224, 0.06)',
+                border: '1px solid rgba(124, 79, 224, 0.15)',
+                borderRadius: 'var(--radius-medium)',
+                padding: '16px 20px',
+            }}
+        >
+            <p style={{ margin: 0, fontSize: '13px', color: '#6b6a70', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: "center" }}>
+                Average deviation
+            </p>
+            <p style={{ margin: '6px 0 0', fontSize: '28px', fontWeight: 800, color: '#18171a', textAlign: "center" }}>
+                {average_deviation.toFixed(2)} <span style={{ fontSize: '15px', fontWeight: 600, color: '#6b6a70' }}>cents</span>
+            </p>
+        </div>
 
-                <p>
-                    Time in tune: <strong>{time_in_tune.toFixed(1)}%</strong>
-                </p>
-            </section>
+        <div
+            style={{
+                flex: '1 1 200px',
+                backgroundColor: 'rgba(124, 79, 224, 0.06)',
+                border: '1px solid rgba(124, 79, 224, 0.15)',
+                borderRadius: 'var(--radius-medium)',
+                padding: '16px 20px',
+            }}
+        >
+            <p style={{ margin: 0, fontSize: '13px', color: '#6b6a70', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' , textAlign: "center"}}>
+                Time in tune
+            </p>
+            <p style={{ margin: '6px 0 0', fontSize: '28px', fontWeight: 800, color: '#18171a' , textAlign: "center"}}>
+                {time_in_tune.toFixed(1)}<span style={{ fontSize: '15px', fontWeight: 600, color: '#6b6a70' }}>%</span>
+            </p>
+        </div>
+    </div>
+</section>
         </main>
     );
 }
