@@ -13,6 +13,37 @@ const ENDING_STATUS = {
     ENDED: "Ended",
 };
 const HIGHWAY_CARD_HEIGHT = 660;
+function normalizeProcessedNotes(processedData) {
+    const rawEntries =
+        Array.isArray(processedData) ? processedData :
+        Array.isArray(processedData?.notes) ? processedData.notes :
+        Array.isArray(processedData?.["processed data"]?.notes) ? processedData["processed data"].notes :
+        [];
+
+    return rawEntries
+        .filter((entry) => entry?.type === "note")
+        .map((entry) => {
+            const targetFrequencyHz = Number(entry.frequency_hz);
+            const halfTone = Number.isFinite(targetFrequencyHz) && targetFrequencyHz > 0
+                ? 12 * Math.log2(targetFrequencyHz / 440) + 57
+                : null;
+
+            return {
+                startTimeSeconds: Number(entry.start_time_seconds),
+                durationSeconds: Number(entry.duration_seconds),
+                halfTone,
+                targetFrequencyHz,
+                // processed_data z serwera może nie mieć tekstu sylab —
+                // jeśli go nie ma, highway po prostu nie narysuje etykiety.
+                lyricText: entry.lyric_text ?? null,
+            };
+        })
+        .filter((note) =>
+            Number.isFinite(note.startTimeSeconds) &&
+            Number.isFinite(note.durationSeconds) &&
+            Number.isFinite(note.halfTone)
+        );
+}
 export default function OngoingExercise() {
     const queryClient = useQueryClient();
     const {id, exercise_slug} = useParams();
@@ -21,7 +52,10 @@ export default function OngoingExercise() {
     const {state} = location_data;
 
     const audio = useAudio(state.piano_presigned_url);
-
+    const targetNotesRef = useRef(null);
+if (targetNotesRef.current === null) {
+    targetNotesRef.current = normalizeProcessedNotes(state.processed_data);
+}
     const {
         frequency,
         note,
@@ -212,34 +246,42 @@ export default function OngoingExercise() {
     }, [startMicrophone, stopMicrophone]);
 
     useEffect(() => {
-        if (cents === null || clarity < 0.9 || !Number.isFinite(frequency)) {
-            return;
-        }
+        if (!audio.isPlaying) {
+        return; 
+    }
+    const now = performance.now();
+    if (lastFrameTimeRef.current && now - lastFrameTimeRef.current < 80) {
+        return;
+    }
+    lastFrameTimeRef.current = now;
 
-        const now = performance.now();
-        if (lastFrameTimeRef.current && now - lastFrameTimeRef.current < 80) {
-            return;
-        }
-        lastFrameTimeRef.current = now;
+    // Każda próbka czasu liczy się do mianownika — pauza też.
+    totalPitchFramesRef.current += 1;
 
+    const isValidPitch = cents !== null && clarity >= 0.9 && Number.isFinite(frequency);
+
+    if (isValidPitch) {
         const absoluteDeviation = Math.abs(cents);
         deviationSamplesRef.current.push(absoluteDeviation);
-        totalPitchFramesRef.current += 1;
 
-        if (absoluteDeviation <= 20) {
+        if (absoluteDeviation <= 30) {
             timeInTuneFramesRef.current += 1;
         }
+    }
 
-        const currentAverage =
-            deviationSamplesRef.current.reduce((sum, value) => sum + value, 0) /
-            deviationSamplesRef.current.length;
+    const currentAverage =
+        deviationSamplesRef.current.length > 0
+            ? deviationSamplesRef.current.reduce((sum, v) => sum + v, 0) / deviationSamplesRef.current.length
+            : 0;
 
-        const currentTimeInTune =
-            (timeInTuneFramesRef.current / totalPitchFramesRef.current) * 100;
+    const currentTimeInTune =
+        totalPitchFramesRef.current > 0
+            ? (timeInTuneFramesRef.current / totalPitchFramesRef.current) * 100
+            : 0;
 
-        setAverageDeviation(currentAverage);
-        setTimeInTune(currentTimeInTune);
-    }, [cents, clarity, frequency]);
+    setAverageDeviation(currentAverage);
+    setTimeInTune(currentTimeInTune);
+}, [cents, clarity, frequency]);
 
     useEffect(() => {
         console.log("auddio toggle event")
@@ -345,7 +387,12 @@ export default function OngoingExercise() {
             </button>
         </div>
 
-        <NoteHighway musicXmlUrl={state.source_presigned_url} audioRef={audio.audioRef}/>
+       <NoteHighway
+    notes={targetNotesRef.current}
+    audioRef={audio.audioRef}
+    liveFrequency={frequency}
+    liveClarity={clarity}
+/>
     </section>
 
                     {/* <div style={{marginTop: "20px"}}>
@@ -374,7 +421,10 @@ export default function OngoingExercise() {
                     </div> */}
                 
         
-        <CentDeviationMeter cents={cents} isListening={isListening}/>
+        <CentDeviationMeter
+    cents={audio.isPlaying ? cents : null}
+    isListening={audio.isPlaying && isListening}
+/>
 </section>
             <section
     className="app-card ongoing"
