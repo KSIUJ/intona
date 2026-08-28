@@ -200,13 +200,7 @@ function Dashboard() {
 
     return (<div className="dashboard">
             <aside className="dashboard-sidebar">
-                <button
-                    className="sidebar-menu-button"
-                    type="button"
-                    aria-label="Open menu"
-                >
-                    ☰
-                </button>
+
 
                 <nav className="sidebar-navigation">
                     <Link className="sidebar-link" to="/">
@@ -241,13 +235,7 @@ function Dashboard() {
                         <h1>Dashboard</h1>
                     </div>
 
-                    <button
-                        className="more-button"
-                        type="button"
-                        aria-label="More options"
-                    >
-                        ⋮
-                    </button>
+
                 </header>
 
                 <section className="profile-section">
