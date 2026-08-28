@@ -61,10 +61,11 @@ export function calculateCentsDeviation(
 
     let cents = 1200 * Math.log2(detectedFrequency / targetFrequency);
 
-    // Zwijanie oktaw (Octave folding)
-    cents = cents % 1200;
-    if (cents > 600) cents -= 1200;
-    if (cents < -600) cents += 1200;
+    // Bezpieczne zwijanie oktaw (JavaScript źle radzi sobie z modulo dla liczb ujemnych)
+    cents = ((cents % 1200) + 1200) % 1200;
+    if (cents > 600) {
+        cents -= 1200;
+    }
 
     return cents;
 }
@@ -216,12 +217,7 @@ export function calculateNoteScore(
     const { minClarity = 0.9, sigmaRatio = 0.25, currentTime = null } = options;
 
     if (!targetNote || targetNote.type !== "note") {
-        return {
-            score: null,
-            averageDeviation: null,
-            frameCount: 0,
-            validFrameCount: 0
-        };
+        return { score: null, averageDeviation: null, frameCount: 0, validFrameCount: 0 };
     }
 
     const startTime = Number(targetNote.start_time_seconds);
@@ -235,12 +231,7 @@ export function calculateNoteScore(
         !Number.isFinite(targetFrequency) ||
         targetFrequency <= 0
     ) {
-        return {
-            score: 0,
-            averageDeviation: null,
-            frameCount: 0,
-            validFrameCount: 0
-        };
+        return { score: 0, averageDeviation: null, frameCount: 0, validFrameCount: 0 };
     }
 
     const framesInsideNote = pitchFrames.filter((frame) => {
@@ -273,23 +264,27 @@ export function calculateNoteScore(
         weightedScoreSum += frameScore * weight;
 
         if (centsDeviation !== null && Number.isFinite(centsDeviation)) {
-            // Capping: Blokujemy drastyczne skoki odchylenia na maksymalnie 50 centach.
-            const cappedDeviation = Math.min(Math.abs(centsDeviation), 50);
+            let absDeviation = Math.abs(centsDeviation);
+
+            // DEADZONE: Tolerancja na naturalne wibracje głosu
+            // Jeśli trafiasz z dokładnością do 10 centów, uznajemy to za czyste 0 dewiacji
+            if (absDeviation <= 10) {
+                absDeviation = 0;
+            }
+
+            const cappedDeviation = Math.min(absDeviation, 50);
             weightedDeviationSum += cappedDeviation * weight;
             validDeviationWeight += weight;
         }
     }
 
-    // Oczekujemy klatek tylko do momentu bieżącego czasu audio
     const timeToEvaluate = currentTime !== null ? Math.min(currentTime, endTime) : endTime;
     const elapsedDurationForNote = Math.max(0, timeToEvaluate - startTime);
 
-    // ~80ms na klatkę z Pitchy
     const expectedFrameCount = Math.floor(elapsedDurationForNote / 0.08);
     const missingFrames = Math.max(0, expectedFrameCount - framesInsideNote.length);
 
     if (missingFrames > 0) {
-        // Wypełniamy puste miejsca wagą z wynikiem 0
         const averageExpectedWeight = 0.5;
         totalWeight += (missingFrames * averageExpectedWeight);
     }
