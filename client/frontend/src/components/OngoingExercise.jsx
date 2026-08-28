@@ -16,12 +16,11 @@ const ENDING_STATUS = {
 
 export default function OngoingExercise() {
     const queryClient = useQueryClient();
-     const { id, exercise_slug } = useParams();
+    const {id, exercise_slug} = useParams();
     const navigate = useNavigate();
     const location_data = useLocation();
     const {state} = location_data;
 
-    console.log(`State ${JSON.stringify(state)}`)
     // Audio (fortepian) gra z piano_presigned_url - osobny link od pliku z nutami
     const audio = useAudio(state.piano_presigned_url);
 
@@ -75,6 +74,7 @@ export default function OngoingExercise() {
         average_deviation,
         exercise_end_status
     ) => {
+        console.log(`BODYYYYYY: ${log_id}, ${exercise_duration}, ${time_in_tune}, ${average_deviation}, ${exercise_end_status}`)
         const api_response = await fetch(`/api/exercises/${log_id}/end`, {
             method: "POST",
             credentials: "include",
@@ -185,11 +185,11 @@ export default function OngoingExercise() {
         });
     };
 
-    const handleKeyDownEvent = (event) => {
+    const handleKeyDownEvent = async (event) => {
         const key = event.code;
         if (key === "Space") {
             event.preventDefault();
-            audio.Toggle();
+            await audio.Toggle.current()
         }
     };
 
@@ -244,6 +244,7 @@ export default function OngoingExercise() {
     }, [cents, clarity, frequency]);
 
     useEffect(() => {
+        console.log("auddio toggle event")
         if (back_up_interval_id.current) {
             clearInterval(back_up_interval_id.current);
         }
@@ -311,7 +312,7 @@ export default function OngoingExercise() {
             <section style={{display: 'flex', flexDirection: 'row'}}>
                 <section className="app-card" style={{padding: "24px", marginBottom: "24px"}}>
                     <div style={{display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "24px"}}>
-                        <button type="button" className="btn btn-primary" onClick={() => audio.Toggle()}>
+                        <button type="button" className="btn btn-primary" onClick={() => audio.Toggle.current()}>
                             {audio.isPlaying ? "Pause" : "Start"}
                         </button>
 

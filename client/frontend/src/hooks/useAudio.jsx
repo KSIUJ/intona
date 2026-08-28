@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import {useState, useRef, useEffect} from "react";
 import mitt from "mitt";
 
 export default function useAudio(presigned_url) {
@@ -7,11 +7,13 @@ export default function useAudio(presigned_url) {
     const audio = useRef(null);
     const intervalId = useRef(null);
     const time = useRef(0);
+    const toggleRef = useRef(null);
 
     const hasEndedEventEmitter = useRef(mitt());
     const setTime = (value) => {
         time.current = value;
     };
+
 
     useEffect(() => {
         console.log(`Presigned url: ${presigned_url}`)
@@ -40,9 +42,15 @@ export default function useAudio(presigned_url) {
     }, [presigned_url]);
 
     async function Start() {
+        console.log('START')
         if (!audio.current) {
             return;
         }
+
+        if (!audio.current.paused) {
+            return;
+        }
+
         try {
             await audio.current.play();
         } catch (e) {
@@ -56,16 +64,20 @@ export default function useAudio(presigned_url) {
 
         if (intervalId.current) {
             clearInterval(intervalId.current);
+            intervalId.current = null;
         }
 
         intervalId.current = setInterval(() => {
-            time.current = audio.current.currentTime * 1000;
+            if (audio.current) {
+                time.current = audio.current.currentTime * 1000;
+            }
         }, 10);
 
         setPlaying(true);
     }
 
     function Stop() {
+        console.log('STOP')
         if (!audio.current) {
             return;
         }
@@ -79,12 +91,13 @@ export default function useAudio(presigned_url) {
 
 
     async function Toggle() {
-        if (isPlaying) {
+        if (isPlaying || (audio.current && !audio.current.paused)) {
             Stop();
         } else {
             await Start();
         }
     }
+
 
     function ChangeVolume(step) {
         if (step > 0) {
@@ -100,12 +113,14 @@ export default function useAudio(presigned_url) {
         audio.current.currentTime = time_to;
     }
 
+    toggleRef.current = Toggle;
+
     return {
         audioRef: audio,
         hasEndedEventEmitter,
         FastForward,
         ChangeVolume,
-        Toggle,
+        Toggle: toggleRef,
         isPlaying,
         time,
         setTime,

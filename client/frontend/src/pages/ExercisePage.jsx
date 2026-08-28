@@ -24,10 +24,7 @@ export default function ExercisePage() {
         mutationFn: () => getData(id),
         onSuccess(data) {
             console.log("successfully started exercise")
-            localStorage.removeItem("average_deviation")
             localStorage.removeItem('exercise_access_token')
-            localStorage.removeItem('time')
-            localStorage.removeItem('time_in_tune')
             navigate(`/exercises/${id}/${exercise_name}/start`, {
                 state: {
                     piano_presigned_url: data.piano_presigned_url,

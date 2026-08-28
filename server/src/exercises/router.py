@@ -345,3 +345,4 @@ async def remove_access_to_log(db: SessionDep, exercise_log_id: str, exercise_de
             raise HTTPException(status_code=409, detail="Exercise was already ended")
     else:
         raise HTTPException(status_code=409, detail="Exercise was already ended / stopped")
+
