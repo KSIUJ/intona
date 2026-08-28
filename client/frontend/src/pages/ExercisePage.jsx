@@ -1,8 +1,8 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import {useMutation, useQuery} from "@tanstack/react-query";
 
 export default function ExercisePage() {
-    const { exercise_slug, id } = useParams();
+    const { exercise_name, id } = useParams();
     const navigate = useNavigate();
 
     const getData = async (id) => {
@@ -20,28 +20,25 @@ export default function ExercisePage() {
         return api_response_json
     };
 
-    const { data: item, isLoading, isError } = useQuery({
-        queryKey: ["exercise", id],
-        queryFn: () => getData(id),
-        staleTime: Infinity,
-        refetchOnWindowFocus: false,
-    });
-
-    const handleStart = () => {
-        if (!item) return;
-        navigate(`/exercises/${id}/${exercise_slug}/start`, {
+    const {mutate} = useMutation({
+        mutationFn: () => getData(id),
+        onSuccess(data) {
+            console.log("successfully started exercise")
+            navigate(`/exercises/${id}/${exercise_slug}/start`, {
             state: {
-                piano_presigned_url: item.piano_presigned_url,
-                source_presigned_url: item.source_presigned_url,
-                processed_data: item.processed_data,
-                log_id: item.log_id,
-                exercise_access_token: item.exercise_access_token,
+                piano_presigned_url: data.piano_presigned_url,
+                source_presigned_url: data.source_presigned_url,
+                processed_data: data.processed_data,
+                log_id: data.log_id,
+                exercise_access_token: data.exercise_access_token,
             },
         });
-    };
-
-    if (isLoading) return <p>Loading exercise...</p>;
-    if (isError) return <p>An error occurred!</p>;
+        },
+        onError(error) {
+            console.log(JSON.stringify(error))
+            navigate("/")
+        }
+    })
 
     return (
         <div className="page-container">
@@ -71,7 +68,7 @@ export default function ExercisePage() {
                     >
                         INTONA
                     </div>
-                    <h1 style={{ margin: 0 }}>{item?.title ?? "Exercise"}</h1>
+                    <h1 style={{ margin: 0 }}>{exercise_name ?? "Exercise"}</h1>
                 </div>
             </div>
 
@@ -83,7 +80,7 @@ export default function ExercisePage() {
                 </p>
 
                 <div style={{ display: "flex", justifyContent: "center" }}>
-                    <button type="button" className="btn btn-primary" onClick={handleStart}>
+                    <button type="button" className="btn btn-primary" onClick={() => mutate(id)}>
                         Start
                     </button>
                 </div>

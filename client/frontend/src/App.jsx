@@ -22,9 +22,9 @@ function App() {
                     <Route path="/sign_up" element={<SignUp/>}/>
                     <Route path="/forgot_password" element={<ForgetPasswordPage/>}/>
                     <Route path="/dashboard" element={<Dashboard/>}/>
-                    <Route path="/exercises/:id/:exercise_slug" element={<ExercisePage/>}/>
-                    <Route path="/exercises/:id/:exercise_slug/start" element={<OngoingExercise/>}/>
-                    <Route path="/exercises/:id/:exercise_slug/summary" element={<ExerciseSummary/>}/>
+                    <Route path="/exercises/:id/:exercise_name" element={<ExercisePage/>}/>
+                    <Route path="/exercises/:id/:exercise_name/start" element={<OngoingExercise/>}/>
+                    <Route path="/exercises/:id/:exercise_name/summary" element={<ExerciseSummary/>}/>
                 </Routes>
             </BrowserRouter>
         </QueryClientProvider>

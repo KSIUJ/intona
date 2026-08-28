@@ -84,7 +84,7 @@ const ExerciseCard = ({id, title, slug, difficulty, rating, linkBase, type, clic
         <Card className="carousel-card">
             <CardActionArea
                 component={clickable ? Link : 'div'}
-                to={clickable ? `${linkBase}/${id}/${slug}?type=${type}` : ''}
+                to={clickable ? `${linkBase}/${id}/${title}?type=${type}` : ''}
                 sx={{height: '100%'}}
             >
                 <CardContent
